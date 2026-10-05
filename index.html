@@ -960,16 +960,15 @@ html[data-theme="dark"] .calc-display .ring{--water-ring:rgba(110,200,255,0.6); 
 <section class="screen" id="screen-loan">
   <div class="screen-head">
     <h2>Loan &amp; EMI</h2>
-    <p><b>Bank EMI</b> is the standard loan EMI: interest compounded monthly on the balance you still owe. The two <b>full amount</b> options are for unusual loans that charge interest on the whole sum for the whole tenure, even as you repay it.</p>
+    <p>Every loan here is worked out on the <b>reducing balance</b>: interest is charged only on what you still owe. <b>Compound</b> gives a fixed EMI every month, the standard bank method. <b>Simple</b> repays the principal in equal parts with interest on what's left, so the instalment starts higher and falls each month.</p>
   </div>
 
   <div class="seg-row">
     <div>
       <span class="seg-label">Interest method</span>
       <div class="seg" id="seg-interest">
-        <button class="active" data-val="reducing">Bank EMI<br>(standard)</button>
-        <button data-val="compound">Compound on<br>full amount</button>
-        <button data-val="simple">Simple on<br>full amount</button>
+        <button class="active" data-val="compound">Compound interest<br>reducing balance</button>
+        <button data-val="simple">Simple interest<br>reducing balance</button>
       </div>
     </div>
     <div>
@@ -1011,12 +1010,12 @@ html[data-theme="dark"] .calc-display .ring{--water-ring:rgba(110,200,255,0.6); 
       <div class="field" id="field-comp-freq">
         <label for="loanCompFreq">Compounding</label>
         <select id="loanCompFreq">
-          <option value="1" selected>Yearly</option>
-          <option value="2">Half-yearly</option>
+          <option value="12" selected>Monthly</option>
           <option value="4">Quarterly</option>
-          <option value="12">Monthly</option>
+          <option value="2">Half-yearly</option>
+          <option value="1">Yearly</option>
         </select>
-        <p class="hint">Only for <b>Compound on full amount</b>. A Bank EMI always compounds monthly on the balance owed.</p>
+        <p class="hint">How often interest is added. EMIs are still paid every month, on the balance you still owe. Banks usually compound monthly.</p>
       </div>
 
       <div class="field">
@@ -1751,26 +1750,10 @@ const solveSeg = seg('seg-solve', v => {
 const amortViewSeg = seg('seg-amort-view', () => renderAmort());
 
 /*
-  Both methods charge interest on the FULL loan amount for the whole tenure
-  (not on the reducing balance). The total is then split into equal EMIs.
-    Simple   : total = P × (1 + r·t)
-    Compound : total = P × (1 + r/f)^(f·t)   — whole periods compounded,
-                                                any broken period at simple rate
+  Loans — both methods charge interest only on the balance still owed:
+    Compound : fixed EMI, EMI = B·r·(1+r)^n / ((1+r)^n − 1)
+    Simple   : equal principal B/n each month + simple interest on the balance
 */
-function simpleFactor(rate, months){
-  return 1 + (rate/100) * (months/12);
-}
-function compoundFactor(rate, months, f){
-  const i = rate/100/f;
-  const periods = f * months/12;
-  const whole = Math.floor(periods + 1e-9);
-  const frac = periods - whole;
-  return Math.pow(1+i, whole) * (1 + i*frac);
-}
-function growthFactor(method, rate, months, f){
-  return method === 'compound' ? compoundFactor(rate, months, f) : simpleFactor(rate, months);
-}
-
 /* standard bank (reducing-balance) EMI — used only as a comparison benchmark */
 function bankEMI(P, rate, n){
   const r = rate/1200;
@@ -1800,7 +1783,7 @@ function loanInputs(){
     amount: num('loanAmount'),
     emi: num('loanEmiInput'),
     rate: num('loanRate'),
-    freq: parseInt($('loanCompFreq').value, 10) || 1,
+    freq: parseInt($('loanCompFreq').value, 10) || 12,
     months: months,
     morat: Math.min(Math.max(0, num('moratMonths')), Math.max(months-1, 0)),
     moratTreat: $('moratTreatment').value,
@@ -1811,35 +1794,38 @@ function loanInputs(){
 
 /* one full working for a given method */
 function priceLoan(inp, method){
-  if(method === 'reducing') return priceReducing(inp);
-  const n = inp.months - inp.morat;
-  const grow = inp.morat > 0 ? growthFactor(method, inp.rate, inp.morat, inp.freq) : 1;
-  const loanF = n > 0 ? growthFactor(method, inp.rate, n, inp.freq) : 1;
+  return method === 'compound' ? priceReducing(inp) : priceSimpleReducing(inp);
+}
 
-  let P, EMI, base, moratInterest = 0;
-
+/* Simple interest on the reducing balance. Principal is repaid in equal parts
+   (B/n a month) and each month's interest is simple interest on the balance
+   still owed, so the instalment starts at B/n + B·r and falls by (B/n)·r a month.
+     total interest = B·r·(n+1)/2
+   Moratorium: interest accrues as simple interest on the loan (never compounds);
+   it is either added to the loan or paid as it falls due.
+   "Find loan amount" treats the affordable EMI as the first (largest) instalment. */
+function priceSimpleReducing(inp){
+  const n = inp.months - inp.morat, r = inp.rate/1200;
+  const accr = inp.morat > 0 ? (inp.rate/100) * (inp.morat/12) : 0;
+  const cap = inp.morat > 0 && inp.moratTreat === 'capitalize';
+  let P, base, EMI;
   if(inp.solveMode === 'emi'){
     P = inp.amount;
-    if(inp.morat > 0){
-      if(inp.moratTreat === 'capitalize'){ base = P*grow; moratInterest = base - P; }
-      else { base = P; moratInterest = P*(grow-1); }
-    } else base = P;
-    EMI = n > 0 ? base * loanF / n : 0;
+    base = cap ? P*(1 + accr) : P;
+    EMI = n > 0 ? base/n + base*r : 0;
   } else {
     EMI = inp.emi;
-    base = loanF > 0 ? EMI * n / loanF : 0;
-    if(inp.morat > 0){
-      if(inp.moratTreat === 'capitalize'){ P = base/grow; moratInterest = base - P; }
-      else { P = base; moratInterest = P*(grow-1); }
-    } else P = base;
+    base = n > 0 ? EMI / (1/n + r) : 0;
+    P = cap ? base/(1 + accr) : base;
   }
-
-  const repayInterest = base * (loanF - 1);            // interest over the repayment period
+  const moratInterest = P*accr;
   const paidDuringMorat = (inp.morat > 0 && inp.moratTreat === 'payNow') ? moratInterest : 0;
-  const totalPaid = EMI*n + paidDuringMorat;
-  const totalInterest = totalPaid - P;
-  return {P, EMI, base, n, loanF, repayInterest, grow, moratInterest,
-          paidDuringMorat, totalPaid, totalInterest, method};
+  const repayInterest = n > 0 ? base*r*(n+1)/2 : 0;
+  const totalPaid = base + repayInterest + paidDuringMorat;
+  return {P, EMI, firstEMI: EMI, lastEMI: n > 0 ? (base/n)*(1 + r) : 0,
+          avgEMI: n > 0 ? (base + repayInterest)/n : 0, drop: n > 0 ? (base/n)*r : 0,
+          base, n, r, repayInterest, grow: 1 + accr, moratInterest, paidDuringMorat,
+          totalPaid, totalInterest: totalPaid - P, method: 'simple', varies: true};
 }
 
 /* Reducing balance — the bank EMI. Interest each month is charged only on
@@ -1847,6 +1833,23 @@ function priceLoan(inp, method){
    that clears the loan in n months:  EMI = B·r·(1+r)^n / ((1+r)^n − 1).
    Moratorium: interest either compounds monthly onto the loan, or is paid
    off each month as it falls due (so it never compounds). */
+/* monthly rate equivalent to `rate`% a year compounded f times a year:
+   (1 + R/f)^(f/12) − 1.  For monthly compounding this is simply R/12. */
+function monthlyRate(rate, f){
+  f = f || 12;
+  return f === 12 ? rate/1200 : Math.pow(1 + rate/100/f, f/12) - 1;
+}
+function emiAt(B, r, n){
+  if(n <= 0) return 0;
+  if(r === 0) return B/n;
+  const x = Math.pow(1+r, n);
+  return B * r * x / (x - 1);
+}
+function pvAt(EMI, r, n){
+  if(n <= 0) return 0;
+  if(r === 0) return EMI*n;
+  return EMI * (1 - Math.pow(1+r, -n)) / r;
+}
 function annuityPV(EMI, rate, n){
   const r = rate/1200;
   if(n <= 0) return 0;
@@ -1854,16 +1857,16 @@ function annuityPV(EMI, rate, n){
   return EMI * (1 - Math.pow(1+r, -n)) / r;
 }
 function priceReducing(inp){
-  const n = inp.months - inp.morat, r = inp.rate/1200;
+  const n = inp.months - inp.morat, r = monthlyRate(inp.rate, inp.freq);
   const capGrow = inp.morat > 0 ? Math.pow(1+r, inp.morat) : 1;
   let P, EMI, base, moratInterest = 0;
   if(inp.solveMode === 'emi'){
     P = inp.amount;
     base = (inp.morat > 0 && inp.moratTreat === 'capitalize') ? P*capGrow : P;
-    EMI = n > 0 ? bankEMI(base, inp.rate, n) : 0;
+    EMI = n > 0 ? emiAt(base, r, n) : 0;
   } else {
     EMI = inp.emi;
-    base = annuityPV(EMI, inp.rate, n);
+    base = pvAt(EMI, r, n);
     P = (inp.morat > 0 && inp.moratTreat === 'capitalize') ? base/capGrow : base;
   }
   if(inp.morat > 0) moratInterest = inp.moratTreat === 'capitalize' ? base - P : P*r*inp.morat;
@@ -1871,39 +1874,20 @@ function priceReducing(inp){
   const repayInterest = EMI*n - base;
   const totalPaid = EMI*n + paidDuringMorat;
   return {P, EMI, base, n, r, loanF: base > 0 ? EMI*n/base : 1, repayInterest, grow: capGrow,
-          moratInterest, paidDuringMorat, totalPaid, totalInterest: totalPaid - P, method: 'reducing'};
+          moratInterest, paidDuringMorat, totalPaid, totalInterest: totalPaid - P, method: 'compound'};
 }
 
-/* month rows: principal and interest are both recovered in equal parts,
-   since interest was fixed upfront on the full amount */
+/* month rows — both methods charge interest on the balance still owed */
 function scheduleRows(inp, w){
   const rows = [];
   if(w.n <= 0) return rows;
-  if(w.method === 'reducing'){
-    let bal = w.base;
-    for(let m = 1; m <= w.n && m <= 1200; m++){
-      const opening = bal, interest = opening * w.r;
-      let principal = w.EMI - interest;
-      if(m === w.n) principal = opening;                // last EMI clears any rounding
-      bal = Math.max(0, opening - principal);
-      rows.push({m: inp.morat + m, opening, emi: principal + interest, interest, principal, closing: bal});
-    }
-    return rows;
-  }
-  const pPart = w.base / w.n;
-  const iPart = w.repayInterest / w.n;
   let bal = w.base;
   for(let m = 1; m <= w.n && m <= 1200; m++){
-    const opening = bal;
-    bal = m === w.n ? 0 : Math.max(0, opening - pPart);
-    rows.push({
-      m: inp.morat + m,
-      opening: opening,
-      emi: pPart + iPart,
-      interest: iPart,
-      principal: m === w.n ? opening : pPart,
-      closing: bal
-    });
+    const opening = bal, interest = opening * w.r;
+    let principal = w.method === 'compound' ? w.EMI - interest : w.base / w.n;
+    if(m === w.n) principal = opening;                  // last instalment clears any rounding
+    bal = Math.max(0, opening - principal);
+    rows.push({m: inp.morat + m, opening, emi: principal + interest, interest, principal, closing: bal});
   }
   return rows;
 }
@@ -1929,7 +1913,6 @@ function computeLoan(){
   }
   $('loanVs').style.display = '';
   const all = {
-    reducing: priceLoan(inp, 'reducing'),
     compound: priceLoan(inp, 'compound'),
     simple:   priceLoan(inp, 'simple')
   };
@@ -1937,21 +1920,30 @@ function computeLoan(){
   lastLoanWork = chosen;
 
   /* ---- main ledger ---- */
+  const simple = inp.method === 'simple';
   const head = inp.solveMode === 'emi'
-    ? {k:'Monthly EMI', v: fmt(chosen.EMI), said: rupeesInWords(Math.round(chosen.EMI)) + ' per month'}
-    : {k:'Loan you can take', v: fmt(chosen.P), said: rupeesInWords(Math.round(chosen.P))};
+    ? (simple
+        ? {k:'First EMI', v: fmt(chosen.EMI), said: 'Falls by ' + fmt(chosen.drop) + ' every month, to ' +
+            fmt(chosen.lastEMI) + ' in the last month'}
+        : {k:'Monthly EMI', v: fmt(chosen.EMI), said: rupeesInWords(Math.round(chosen.EMI)) + ' per month'})
+    : {k:'Loan you can take', v: fmt(chosen.P), said: rupeesInWords(Math.round(chosen.P)) +
+        (simple ? ', with a first EMI of ' + fmt(chosen.EMI) : '')};
 
   let h = '<div class="ledger-head"><div class="eyebrow">' + head.k + '</div>' +
           '<div class="big">' + head.v + '</div>' +
           '<div class="said">' + head.said + '</div></div><div class="ledger-body">';
 
-  h += line(inp.solveMode === 'emi' ? 'Loan amount' : 'EMI',
+  h += line(inp.solveMode === 'emi' ? 'Loan amount' : (simple ? 'First EMI' : 'EMI'),
             inp.solveMode === 'emi' ? fmt(chosen.P) : fmt(chosen.EMI));
-  h += line('Method', inp.method === 'reducing' ? 'Bank EMI, compounded monthly'
-            : inp.method === 'compound' ? 'Compound on full amount, ' + compLabel(inp.freq)
-            : 'Simple on full amount');
-  h += line('Charged on', inp.method === 'reducing' ? 'Balance still owed' : 'Full loan amount');
+  h += line('Method', simple ? 'Simple interest, reducing balance'
+            : 'Compound (' + compLabel(inp.freq) + '), reducing balance');
+  h += line('Charged on', 'Balance still owed');
+  if(simple){
+    h += line('Last EMI', fmt(chosen.lastEMI));
+    h += line('Average EMI', fmt(chosen.avgEMI));
+  }
   h += line('Rate', pct(inp.rate) + ' per year');
+  if(!simple && inp.freq !== 12) h += line('Monthly rate used', (chosen.r*100).toFixed(4) + '%');
   h += line('Tenure', inp.months + ' months (' + (inp.months/12).toFixed(2) + ' yrs)');
 
   if(inp.morat > 0){
@@ -1963,19 +1955,14 @@ function computeLoan(){
     h += line('First EMI due in month', String(inp.morat + 1));
   }
 
-  if(inp.method === 'reducing'){
-    const i1 = chosen.base * chosen.r;
-    const rowsTmp = scheduleRows(inp, chosen), last = rowsTmp[rowsTmp.length-1];
+  {
+    const rowsTmp = scheduleRows(inp, chosen), first = rowsTmp[0], last = rowsTmp[rowsTmp.length-1];
     h += '<div class="ledger-sub">First EMI is made of</div>';
-    h += line('Principal', fmt(chosen.EMI - i1), 'growth');
-    h += line('Interest', fmt(i1), 'cost');
+    h += line('Principal', fmt(first ? first.principal : 0), 'growth');
+    h += line('Interest', fmt(first ? first.interest : 0), 'cost');
     h += '<div class="ledger-sub">Last EMI is made of</div>';
     h += line('Principal ', fmt(last ? last.principal : 0), 'growth');
     h += line('Interest ', fmt(last ? last.interest : 0), 'cost');
-  } else {
-    h += '<div class="ledger-sub">Each EMI is made of</div>';
-    h += line('Principal', fmt(chosen.n > 0 ? chosen.base/chosen.n : 0), 'growth');
-    h += line('Interest', fmt(chosen.n > 0 ? chosen.repayInterest/chosen.n : 0), 'cost');
   }
 
   h += '<div class="ledger-sub">Totals</div>';
@@ -1991,30 +1978,19 @@ function computeLoan(){
   lastSchedule = scheduleRows(inp, chosen);
   if($('amortWrap').classList.contains('open')) renderAmort();
 
-  /* ---- bank comparison note ---- */
-  const note = $('loanNote');
-  const eq = equivalentBankRate(chosen.base, chosen.EMI, chosen.n);
-  if(inp.method !== 'reducing' && chosen.n > 0 && chosen.EMI > 0 && inp.rate > 0){
-    note.style.display = '';
-    note.innerHTML = '<b>This is not a normal bank EMI.</b> Interest here is charged on the full loan for ' +
-      'the whole tenure, even as you repay it. A standard loan on the same terms (<b>Bank EMI</b>) is <b>' +
-      fmt(all.reducing.EMI) + '</b> a month. This EMI equals a bank loan at about <b>' + pct(eq) + '</b>.';
-  } else {
-    note.style.display = 'none';
-  }
+  $('loanNote').style.display = 'none';
   updateAnswerBar();
 }
 
 function renderVs(inp, all){
-  const picked = inp.method;
-  const names = {reducing:'Bank EMI', compound:'Compound on full amount', simple:'Simple on full amount'};
-  const subs  = {reducing:'standard, compounded monthly on balance owed',
-                 compound:'compounded ' + compLabel(inp.freq) + ', never reduces',
-                 simple:'not compounded, never reduces'};
-  let body = '<div class="vs-head">All three methods, same inputs' +
+  const picked = inp.method, c = all.compound, sm = all.simple;
+  const names = {compound:'Compound interest', simple:'Simple interest'};
+  const subs  = {compound:'fixed EMI, compounded ' + compLabel(inp.freq),
+                 simple:'starts here, falls to ' + fmt(sm.lastEMI)};
+  let body = '<div class="vs-head">Compound vs simple, both on reducing balance' +
     '<span>' + pct(inp.rate) + ' for ' + inp.months + ' months' +
     (inp.solveMode === 'emi' ? ' · monthly EMI' : ' · loan you can take') + '</span></div><div class="vs-list">';
-  ['reducing','compound','simple'].forEach(k => {
+  ['compound','simple'].forEach(k => {
     const w = all[k];
     body += '<div class="vs-row' + (k === picked ? ' picked' : '') + '" data-method="' + k + '">' +
       '<div><div class="vr-name">' + names[k] + '</div><div class="vr-sub">' + subs[k] + '</div></div>' +
@@ -2022,21 +1998,17 @@ function renderVs(inp, all){
       '<div class="vr-sub">interest ' + compact(w.totalInterest) + '</div></div></div>';
   });
   body += '</div><div class="vs-foot">';
-  const me = all[picked];
-  const others = ['reducing','compound','simple'].filter(k => k !== picked);
+  const di = c.totalInterest - sm.totalInterest;
   if(inp.solveMode === 'emi'){
-    body += 'Against ' + names[picked] + ': ' + others.map(k => {
-      const d = all[k].EMI - me.EMI, di = all[k].totalInterest - me.totalInterest;
-      return names[k] + ' is <b class="' + (d > 0 ? 'delta-up' : 'delta-down') + '">' +
-        fmt(Math.abs(d)) + '</b> a month ' + (d > 0 ? 'more' : 'less') + ' (' + (di > 0 ? '+' : '−') +
-        compact(Math.abs(di)).replace('₹','₹') + ' interest)';
-    }).join('; ') + '.';
+    body += 'Simple starts at <b>' + fmt(sm.EMI) + '</b> and falls to <b>' + fmt(sm.lastEMI) +
+      '</b>; compound stays at <b>' + fmt(c.EMI) + '</b>. Over the loan, simple costs <b class="' +
+      (di >= 0 ? 'delta-down' : 'delta-up') + '">' + fmt(Math.abs(di)) + '</b> ' + (di >= 0 ? 'less' : 'more') +
+      ' in interest because the principal is paid off faster.';
   } else {
-    body += 'For the same EMI: ' + others.map(k => {
-      const d = all[k].P - me.P;
-      return names[k] + ' lets you borrow <b class="' + (d > 0 ? 'delta-down' : 'delta-up') + '">' +
-        fmt(Math.abs(d)) + '</b> ' + (d > 0 ? 'more' : 'less');
-    }).join('; ') + '.';
+    const d = c.P - sm.P;
+    body += 'With ' + fmt(inp.emi) + ' as the most you can pay in a month, compound lets you borrow <b class="' +
+      (d >= 0 ? 'delta-down' : 'delta-up') + '">' + fmt(Math.abs(d)) + '</b> ' + (d >= 0 ? 'more' : 'less') +
+      ' than simple (whose first EMI is the largest).';
   }
   body += '</div>';
   $('loanVs').innerHTML = body;
