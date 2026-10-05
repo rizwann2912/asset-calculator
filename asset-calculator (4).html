@@ -1,0 +1,3410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
+<title>Asset Calculator — Loans, Deposits, Value &amp; Units</title>
+<meta name="description" content="Loan EMI, amortisation, SIP, lump sum, FD &amp; RD maturity, inflation-adjusted value and unit conversions.">
+<meta name="theme-color" content="#F1ECDD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14181C" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Asset Calc">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS — paper ledger, light + dark
+   ============================================================ */
+:root{
+  --appbar-h:57px;
+  --rail-h:52px;
+  --paper:#F1ECDD;
+  --paper-raised:#FBF8EF;
+  --paper-sunk:#E8E1CE;
+  --field:#FFFFFF;
+  --ink:#1C2B39;
+  --ink-soft:#5B6B78;
+  --ink-faint:#8A97A2;
+  --rule:#C9BFA0;
+  --rule-soft:#DED6BC;
+  --margin-red:#A6432F;
+  --growth:#2F6F4E;
+  --growth-soft:#E4EEE7;
+  --cost:#A6432F;
+  --cost-soft:#F3E4DF;
+  --gold:#B98A2E;
+  --gold-soft:#F1E4C4;
+  --gold-ink:#5c4718;
+  --shadow: 0 1px 0 rgba(28,43,57,0.05), 0 8px 24px rgba(28,43,57,0.07);
+  --shadow-lift: 0 -2px 18px rgba(28,43,57,0.10);
+  --tap: rgba(166,67,47,0.10);
+  --nav-h: 62px;
+  --bar-h: 54px;
+}
+html[data-theme="dark"]{
+  --paper:#14181C;
+  --paper-raised:#1C2228;
+  --paper-sunk:#0F1317;
+  --field:#232B32;
+  --ink:#EDE6D4;
+  --ink-soft:#9EAAB4;
+  --ink-faint:#75828C;
+  --rule:#3A434C;
+  --rule-soft:#2A3138;
+  --margin-red:#DC7259;
+  --growth:#66BB8E;
+  --growth-soft:#1E2E26;
+  --cost:#DC7259;
+  --cost-soft:#31201C;
+  --gold:#D8AF5F;
+  --gold-soft:#2C2416;
+  --gold-ink:#E8D5A6;
+  --shadow: 0 1px 0 rgba(0,0,0,0.30), 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-lift: 0 -2px 18px rgba(0,0,0,0.45);
+  --tap: rgba(220,114,89,0.14);
+}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html{ -webkit-text-size-adjust:100%; }
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none;
+  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+}
+
+/* ============================================================
+   APP BAR
+   ============================================================ */
+.appbar{
+  position:sticky; top:0; z-index:40;
+  background:var(--paper);
+  background:color-mix(in srgb, var(--paper) 88%, transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid var(--rule);
+  padding-top:env(safe-area-inset-top);
+}
+.appbar-in{
+  max-width:1080px; margin:0 auto;
+  display:flex; align-items:center; gap:12px;
+  padding:11px 16px 11px;
+}
+.brand{display:flex; align-items:center; gap:10px; min-width:0;}
+.brand .seal{
+  flex:0 0 auto; width:34px; height:34px; border-radius:50%;
+  border:1.5px solid var(--margin-red); color:var(--margin-red);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'IBM Plex Mono',monospace; font-size:8.5px; line-height:1.05;
+  letter-spacing:0.04em; text-align:center; transform:rotate(-8deg);
+}
+.brand h1{
+  font-family:'Fraunces',Georgia,serif; font-weight:600;
+  font-size:19px; margin:0; letter-spacing:-0.01em; white-space:nowrap;
+}
+.brand .sub{display:none; font-size:11.5px; color:var(--ink-soft); margin-top:1px;}
+.appbar .spacer{flex:1;}
+.iconbtn{
+  width:40px; height:40px; flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--rule); border-radius:11px;
+  background:var(--paper-raised); color:var(--ink); cursor:pointer;
+  transition:transform .12s ease, background .15s ease;
+}
+.iconbtn:active{transform:scale(0.93); background:var(--tap);}
+.iconbtn svg{width:19px;height:19px;}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+.stage{max-width:1080px; margin:0 auto; padding:16px 16px 26px;}
+.screen{display:none; animation:fade .22s ease both;}
+.screen.active{display:block;}
+@keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+.screen-head{margin:0 0 14px;}
+.screen-head h2{
+  font-family:'Fraunces',Georgia,serif; font-size:23px; font-weight:600;
+  margin:0; letter-spacing:-0.01em;
+}
+.screen-head p{margin:4px 0 0; font-size:13px; color:var(--ink-soft); max-width:56ch;}
+
+/* ---------- horizontal chip strip (sub-tabs / categories) ---------- */
+.chips{
+  display:flex; gap:8px; overflow-x:auto; padding:2px 16px 12px;
+  margin:0 -16px; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  scroll-snap-type:x proximity;
+}
+.chips::-webkit-scrollbar{display:none;}
+.chips button{
+  flex:0 0 auto; scroll-snap-align:start;
+  font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+  min-height:38px; padding:0 16px;
+  border:1px solid var(--rule); background:var(--paper-raised);
+  border-radius:19px; cursor:pointer; color:var(--ink-soft);
+  transition:transform .12s ease;
+}
+.chips button:active{transform:scale(0.95);}
+.chips button.active{background:var(--ink); color:var(--paper-raised); border-color:var(--ink);}
+
+/* ---------- segmented control ---------- */
+.seg-label{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em;
+  color:var(--ink-faint); display:block; margin-bottom:7px; font-weight:600;
+}
+.seg{
+  display:grid; grid-auto-flow:column; grid-auto-columns:1fr;
+  background:var(--paper-sunk); border:1px solid var(--rule);
+  border-radius:11px; padding:3px; gap:3px;
+}
+.seg button{
+  font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600;
+  min-height:38px; padding:0 8px; border:none; background:none;
+  border-radius:8px; cursor:pointer; color:var(--ink-soft);
+  transition:background .16s ease, color .16s ease, transform .12s ease;
+  line-height:1.15;
+}
+.seg button:active{transform:scale(0.97);}
+.seg button.active{background:var(--ink); color:var(--paper-raised); box-shadow:var(--shadow);}
+.seg-row{display:flex; flex-direction:column; gap:14px; margin-bottom:16px;}
+@media(min-width:640px){
+  .seg-row{flex-direction:row;}
+  .seg-row > div{flex:1;}
+}
+
+/* ============================================================
+   LAYOUT — form + ledger
+   ============================================================ */
+.grid{display:grid; grid-template-columns:1fr; gap:16px;}
+@media(min-width:900px){
+  .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start;}
+  .grid > .ledger{position:sticky; top:calc(var(--appbar-h) + var(--rail-h) + 14px);}
+}
+
+.card{
+  background:var(--paper-raised);
+  border:1px solid var(--rule);
+  border-radius:16px;
+  padding:18px 16px 6px;
+  box-shadow:var(--shadow);
+}
+.card > h3{
+  font-family:'Fraunces',Georgia,serif; font-size:15px; margin:0 0 15px;
+  padding-bottom:10px; border-bottom:1px dashed var(--rule); font-weight:600;
+}
+.card > h3 .tag{
+  float:right; font-family:'IBM Plex Mono',monospace; font-size:10px;
+  color:var(--ink-faint); font-weight:500; letter-spacing:0.04em;
+  text-transform:uppercase; padding-top:3px;
+}
+
+/* ---------- fields ---------- */
+.field{margin-bottom:16px;}
+.field > label{
+  display:block; font-size:12.5px; color:var(--ink-soft);
+  margin-bottom:6px; font-weight:600;
+}
+.row{display:flex; gap:8px;}
+.row > *{min-width:0;}
+input[type=number], input[type=text], select{
+  width:100%;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:16px;           /* 16px stops iOS zoom-on-focus */
+  min-height:48px;
+  padding:10px 12px;
+  border:1px solid var(--rule);
+  border-radius:11px;
+  background:var(--field);
+  color:var(--ink);
+  appearance:none; -webkit-appearance:none;
+}
+select{
+  font-family:'Inter',sans-serif; font-size:15px;
+  padding-right:34px;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B6B78' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 11px center; background-size:15px;
+}
+html[data-theme="dark"] select{
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239EAAB4' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+input:focus-visible, select:focus-visible, button:focus-visible{
+  outline:2px solid var(--gold); outline-offset:2px;
+}
+input:focus, select:focus{outline:2px solid var(--gold); outline-offset:1px;}
+
+.hint{font-size:11.5px; color:var(--ink-faint); margin:6px 0 0; line-height:1.45;}
+.words{
+  font-size:12px; color:var(--margin-red); margin:7px 0 0;
+  font-weight:600; line-height:1.4; letter-spacing:0.005em;
+  min-height:1px;
+}
+.words:empty{display:none;}
+
+/* tenure trio */
+.tenure{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+.tenure .unit-cap{
+  font-size:10px; text-transform:uppercase; letter-spacing:0.07em;
+  color:var(--ink-faint); font-weight:600; display:block; margin:5px 0 0; text-align:center;
+}
+
+/* quick add buttons */
+.quickrow{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+.quickrow button{
+  font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:500;
+  min-height:32px; padding:0 11px; border-radius:8px;
+  border:1px dashed var(--rule); background:transparent; color:var(--ink-soft);
+  cursor:pointer;
+}
+.quickrow button:active{background:var(--tap);}
+
+/* ============================================================
+   LEDGER RESULT
+   ============================================================ */
+.ledger{
+  background:var(--paper-raised);
+  border:1px solid var(--rule);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  position:relative;
+}
+.ledger::before{
+  content:""; position:absolute; top:0; bottom:0; left:30px;
+  width:1px; background:var(--margin-red); opacity:0.4;
+}
+.ledger-head{padding:16px 18px 13px 44px; border-bottom:1px dashed var(--rule);}
+.ledger-head .eyebrow{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:0.09em;
+  color:var(--margin-red); font-weight:700;
+}
+.ledger-head .big{
+  font-family:'Fraunces',Georgia,serif;
+  font-size:clamp(27px,7.2vw,34px); font-weight:600; margin-top:3px;
+  letter-spacing:-0.015em; line-height:1.1;
+}
+.ledger-head .said{
+  font-size:11.5px; color:var(--ink-soft); margin-top:6px; line-height:1.45;
+}
+.ledger-body{padding:5px 18px 18px 44px;}
+.ledger-line{
+  display:flex; justify-content:space-between; align-items:baseline; gap:14px;
+  padding:10px 0; border-bottom:1px solid var(--rule-soft); font-size:13px;
+}
+.ledger-line:last-child{border-bottom:none;}
+.ledger-line .lbl{color:var(--ink-soft);}
+.ledger-line .val{font-family:'IBM Plex Mono',monospace; font-weight:600; text-align:right;}
+.ledger-line.tall .val{font-size:15px;}
+.val.growth{color:var(--growth);}
+.val.cost{color:var(--cost);}
+.ledger-sub{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em;
+  color:var(--ink-faint); font-weight:700; padding:16px 0 2px;
+}
+
+/* split bar */
+.bar{
+  height:11px; border-radius:6px; overflow:hidden; display:flex;
+  margin:16px 0 9px; border:1px solid var(--rule); background:var(--paper-sunk);
+}
+.bar .a{background:var(--growth); transition:width .4s cubic-bezier(.4,0,.2,1);}
+.bar .b{background:var(--cost); transition:width .4s cubic-bezier(.4,0,.2,1);}
+.bar-legend{display:flex; gap:16px; font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap;}
+.bar-legend span{display:inline-flex; align-items:center; gap:5px;}
+.dot{width:8px; height:8px; border-radius:50%; display:inline-block; flex:0 0 auto;}
+
+/* ============================================================
+   COMPARISON (simple vs compound)
+   ============================================================ */
+.vs{
+  margin-top:16px; background:var(--paper-raised);
+  border:1px solid var(--rule); border-radius:16px;
+  box-shadow:var(--shadow); overflow:hidden;
+}
+.vs-head{
+  padding:14px 16px; border-bottom:1px dashed var(--rule);
+  font-family:'Fraunces',Georgia,serif; font-size:15px; font-weight:600;
+}
+.vs-head span{
+  display:block; font-family:'Inter',sans-serif; font-size:11.5px;
+  font-weight:400; color:var(--ink-soft); margin-top:3px;
+}
+.vs-cols{display:grid; grid-template-columns:1fr 1fr;}
+.vs-col{padding:14px 14px; min-width:0;}
+.vs-col + .vs-col{border-left:1px solid var(--rule-soft);}
+.vs-col.picked{background:var(--gold-soft);}
+.vs-col .kind{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em;
+  color:var(--ink-faint); font-weight:700; line-height:1.3;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.vs-col .amt{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(15px,4.7vw,19px); font-weight:600;
+  margin-top:5px; letter-spacing:-0.01em;
+}
+.vs-col .meta{font-size:11.5px; color:var(--ink-soft); margin-top:5px; line-height:1.5;}
+.vs-list{display:flex; flex-direction:column;}
+.vs-row{
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center;
+  padding:12px 16px; border-top:1px solid var(--rule-soft); cursor:pointer;
+}
+.vs-row:first-child{border-top:none;}
+.vs-row:active{background:var(--tap);}
+.vs-row.picked{background:var(--gold-soft);}
+.vr-name{font-weight:700; font-size:13.5px;}
+.vr-sub{font-size:11.5px; color:var(--ink-soft); margin-top:2px; line-height:1.35;}
+.vr-right{text-align:right;}
+.vr-amt{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:clamp(15px,4.6vw,18px);}
+.vs-foot{
+  padding:13px 16px; border-top:1px solid var(--rule-soft);
+  background:var(--paper-sunk); font-size:12.5px; line-height:1.55;
+}
+.vs-foot b{font-family:'IBM Plex Mono',monospace;}
+.delta-up{color:var(--cost); font-weight:700;}
+.delta-down{color:var(--growth); font-weight:700;}
+
+/* ============================================================
+   NOTE / CALLOUT
+   ============================================================ */
+.note{
+  margin-top:16px; background:var(--gold-soft); border:1px solid var(--gold);
+  border-radius:12px; padding:12px 14px; font-size:12px;
+  color:var(--gold-ink); line-height:1.55;
+}
+.note b{font-weight:700;}
+
+/* ============================================================
+   AMORTISATION
+   ============================================================ */
+.disclose{
+  margin-top:16px; background:none; border:1px dashed var(--rule);
+  border-radius:12px; padding:0 14px; min-height:48px; width:100%;
+  font-size:13px; font-weight:600; cursor:pointer; color:var(--ink);
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  font-family:'Inter',sans-serif;
+}
+.disclose:active{background:var(--tap);}
+.disclose .caret{transition:transform .2s ease; color:var(--ink-soft); font-size:11px;}
+.disclose.open .caret{transform:rotate(180deg);}
+.amort{display:none; margin-top:12px;}
+.amort.open{display:block;}
+.amort-tools{display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;}
+.amort-tools .seg{flex:1; min-width:180px;}
+.linkbtn{
+  font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
+  min-height:38px; padding:0 14px; border-radius:9px;
+  border:1px solid var(--rule); background:var(--paper-raised);
+  color:var(--ink); cursor:pointer;
+}
+.linkbtn:active{background:var(--tap);}
+
+.yearblock{
+  border:1px solid var(--rule); border-radius:12px;
+  overflow:hidden; margin-bottom:9px; background:var(--paper-raised);
+}
+.yearbar{
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+  cursor:pointer; min-height:52px; width:100%; border:none;
+  background:none; color:var(--ink); text-align:left; font-family:'Inter',sans-serif;
+}
+.yearbar:active{background:var(--tap);}
+.yearbar .yr{font-weight:700; font-size:13px; flex:0 0 auto;}
+.yearbar .prog{
+  flex:1; height:6px; border-radius:3px; background:var(--paper-sunk);
+  overflow:hidden; border:1px solid var(--rule-soft);
+}
+.yearbar .prog i{display:block; height:100%; background:var(--growth);}
+.yearbar .pc{
+  font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+  color:var(--ink-soft); flex:0 0 auto; min-width:40px; text-align:right;
+}
+.yearsum{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:2px;
+  padding:0 14px 12px; font-size:11px;
+}
+.yearsum div span{display:block; color:var(--ink-faint); font-size:10px; text-transform:uppercase; letter-spacing:0.05em;}
+.yearsum div b{font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;}
+.monthlist{display:none; border-top:1px solid var(--rule-soft);}
+.monthlist.open{display:block;}
+.mrow{
+  display:grid; grid-template-columns:44px 1fr 1fr 1fr;
+  gap:6px; padding:9px 14px; font-family:'IBM Plex Mono',monospace;
+  font-size:11px; border-bottom:1px solid var(--rule-soft); align-items:baseline;
+}
+.mrow:last-child{border-bottom:none;}
+.mrow:nth-child(even){background:var(--paper-sunk);
+  background:color-mix(in srgb, var(--ink) 3%, transparent);}
+.mrow .m{color:var(--ink-faint);}
+.mrow .i{color:var(--cost); text-align:right;}
+.mrow .p{color:var(--growth); text-align:right;}
+.mrow .b{text-align:right;}
+.mhead{
+  display:grid; grid-template-columns:44px 1fr 1fr 1fr; gap:6px;
+  padding:8px 14px; background:var(--ink); color:var(--paper-raised);
+  font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;
+}
+.mhead span:not(:first-child){text-align:right;}
+
+/* ============================================================
+   UNIT CONVERTER
+   ============================================================ */
+.conv-io{display:grid; grid-template-columns:1fr; gap:10px; align-items:end;}
+.swap{
+  align-self:center; justify-self:center;
+  width:44px; height:44px; border-radius:50%;
+  border:1px solid var(--rule); background:var(--paper-sunk);
+  color:var(--ink); cursor:pointer; display:flex;
+  align-items:center; justify-content:center;
+  transition:transform .25s ease;
+}
+.swap:active{transform:rotate(180deg) scale(0.92);}
+.swap svg{width:18px;height:18px;}
+.conv-out{
+  font-family:'IBM Plex Mono',monospace; font-size:clamp(21px,6vw,27px);
+  font-weight:600; padding:14px 12px; border-radius:12px;
+  background:var(--paper-sunk); border:1px solid var(--rule);
+  word-break:break-all; line-height:1.25;
+}
+.conv-out small{
+  display:block; font-family:'Inter',sans-serif; font-size:11.5px;
+  color:var(--ink-soft); font-weight:400; margin-top:5px; word-break:normal;
+}
+.alllist{margin-top:4px;}
+.arow{
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:11px 12px; border-bottom:1px solid var(--rule-soft);
+  font-size:13px; cursor:pointer; border-radius:8px;
+}
+.arow:active{background:var(--tap);}
+.arow:last-child{border-bottom:none;}
+.arow .un{color:var(--ink-soft);}
+.arow .un i{font-style:normal; color:var(--ink-faint); font-size:11px; margin-left:5px;}
+.arow .qty{font-family:'IBM Plex Mono',monospace; font-weight:600; text-align:right; word-break:break-all;}
+
+/* toast */
+.toast{
+  position:fixed; left:50%; bottom:calc(var(--nav-h) + 22px + env(safe-area-inset-bottom));
+  transform:translate(-50%,14px); z-index:70;
+  background:var(--ink); color:var(--paper-raised);
+  font-size:12.5px; font-weight:600; padding:10px 16px; border-radius:22px;
+  opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+  box-shadow:var(--shadow);
+}
+.toast.show{opacity:1; transform:translate(-50%,0);}
+
+/* ============================================================
+   STICKY ANSWER BAR (mobile)
+   ============================================================ */
+.answerbar{
+  position:fixed; left:0; right:0;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  z-index:35; background:var(--paper-raised);
+  border-top:1px solid var(--rule); box-shadow:var(--shadow-lift);
+  padding:9px 16px; display:flex; align-items:center;
+  justify-content:space-between; gap:12px;
+  transform:translateY(115%); transition:transform .26s cubic-bezier(.4,0,.2,1);
+}
+.answerbar.show{transform:translateY(0);}
+.answerbar .k{font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--margin-red); font-weight:700;}
+.answerbar .v{font-family:'Fraunces',Georgia,serif; font-size:20px; font-weight:600; line-height:1.15;}
+.answerbar .up{
+  flex:0 0 auto; min-height:38px; padding:0 14px; border-radius:19px;
+  border:1px solid var(--rule); background:var(--paper-sunk);
+  color:var(--ink); font-size:12px; font-weight:600; cursor:pointer;
+}
+@media(min-width:900px){ .answerbar{display:none;} }
+
+/* ============================================================
+   BOTTOM NAV
+   ============================================================ */
+.tabbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:50;
+  display:grid; grid-template-columns:repeat(6,1fr);
+  background:var(--paper-raised);
+  background:color-mix(in srgb, var(--paper-raised) 92%, transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(16px);
+  backdrop-filter:saturate(180%) blur(16px);
+  border-top:1px solid var(--rule);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.tabbar button{
+  border:none; background:none; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; height:var(--nav-h); color:var(--ink-faint);
+  font-family:'Inter',sans-serif; font-size:10.5px; font-weight:600;
+  min-width:0; padding:0 2px; white-space:nowrap;
+  transition:color .15s ease;
+  position:relative;
+}
+.tabbar button svg{width:21px; height:21px; transition:transform .18s ease;}
+.tabbar button:active svg{transform:scale(0.88);}
+.tabbar button.active{color:var(--margin-red);}
+.tabbar button.active::before{
+  content:""; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:28px; height:2.5px; border-radius:0 0 3px 3px; background:var(--margin-red);
+}
+
+/* desktop: nav becomes a top rail */
+@media(min-width:900px){
+  body{padding-bottom:0;}
+  .tabbar{
+    position:sticky; top:var(--appbar-h); bottom:auto;
+    max-width:1080px; margin:0 auto; border-top:none;
+    border-bottom:1px solid var(--rule); grid-template-columns:repeat(6,auto);
+    justify-content:start; padding:0 16px; background:var(--paper);
+    backdrop-filter:none; -webkit-backdrop-filter:none; z-index:39;
+  }
+  .tabbar button{
+    flex-direction:row; gap:8px; height:52px; padding:0 18px; font-size:13.5px;
+  }
+  .tabbar button.active::before{top:auto; bottom:0; border-radius:3px 3px 0 0; width:100%;}
+  .brand .sub{display:block;}
+  .appbar-in{padding:13px 16px;}
+  .brand .seal{width:42px;height:42px;font-size:9.5px;}
+  .brand h1{font-size:22px;}
+  .conv-io{grid-template-columns:1fr 56px 1fr; align-items:end;}
+  .conv-io .swap{margin-bottom:5px;}
+  .stage{padding:22px 16px 60px;}
+}
+@media(max-width:899px){
+  .conv-io .swap{margin:-2px 0;}
+}
+
+/* ============================================================
+   CALCULATOR
+   ============================================================ */
+.calc{display:flex; flex-direction:column; gap:12px;}
+.calc-main{display:flex; flex-direction:column; gap:12px; min-width:0;}
+#calcHome .calc{
+  height:calc(100dvh - var(--appbar-h) - var(--nav-h) - env(safe-area-inset-bottom) - 30px);
+  min-height:500px;
+}
+#calcHome .calc-main{flex:1 1 auto; min-height:0;}
+.calc-display{
+  position:relative; flex:1 1 auto; min-height:150px;
+  background:var(--paper-raised); border:1px solid var(--rule);
+  border-radius:18px; box-shadow:var(--shadow);
+  padding:54px 18px 14px 46px;
+  display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-end;
+  overflow:hidden; text-align:right;
+}
+.calc-display::before{
+  content:""; position:absolute; top:0; bottom:0; left:30px;
+  width:1px; background:var(--margin-red); opacity:0.4;
+}
+.calc-tapebtn{
+  position:absolute; top:10px; left:42px;
+  display:inline-flex; align-items:center; gap:6px;
+  min-height:34px; padding:0 12px; border-radius:17px;
+  border:1px solid var(--rule); background:var(--paper-sunk);
+  color:var(--ink-soft); font:600 12px 'Inter',sans-serif; cursor:pointer;
+}
+.calc-tapebtn:active{background:var(--tap);}
+.calc-tapebtn svg{width:15px;height:15px;}
+.calc-tapebtn b{font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--margin-red);}
+.calc-expr{
+  font-family:'IBM Plex Mono',monospace; font-size:15px; color:var(--ink-soft);
+  min-height:22px; word-break:break-all; line-height:1.4;
+}
+.calc-result{
+  font-family:'Fraunces',Georgia,serif; font-weight:600; color:var(--ink);
+  font-size:44px; line-height:1.12; letter-spacing:-0.02em;
+  word-break:break-all; margin-top:2px; cursor:pointer;
+  -webkit-user-select:none; user-select:none;
+}
+.calc-result.err{color:var(--cost); font-size:24px;}
+.calc-words{
+  font-size:12px; color:var(--margin-red); font-weight:600;
+  min-height:17px; margin-top:6px; line-height:1.4; max-width:100%;
+}
+.calc-use{display:none;}
+.calc-use.show{display:block;}
+.calc-use button{
+  width:100%; min-height:48px; border-radius:14px; border:1px solid var(--growth);
+  background:var(--growth-soft); color:var(--growth); cursor:pointer;
+  font:600 13.5px 'Inter',sans-serif; padding:0 14px;
+}
+.calc-use button:active{transform:scale(0.98);}
+.calc-use button b{font-family:'IBM Plex Mono',monospace;}
+
+.calc-keys{
+  flex:0 0 auto; display:grid; grid-template-columns:repeat(4,1fr);
+  grid-auto-rows:clamp(54px, 8.4dvh, 74px); gap:10px;
+}
+.key{
+  border:1px solid var(--rule); border-radius:16px;
+  background:var(--paper-raised); color:var(--ink);
+  font:500 25px 'IBM Plex Mono',monospace; cursor:pointer;
+  box-shadow:0 1px 0 var(--rule-soft);
+  transition:transform .08s ease, background .12s ease;
+  touch-action:manipulation; -webkit-user-select:none; user-select:none;
+}
+.key:active, .key.hit{transform:scale(0.94); background:var(--paper-sunk);}
+.key.fn{background:var(--paper-sunk); color:var(--ink-soft); font:600 17px 'Inter',sans-serif;}
+.key.fn svg{width:24px;height:24px;vertical-align:middle;}
+.key.clear{color:var(--cost); background:var(--cost-soft); border-color:color-mix(in srgb, var(--cost) 35%, var(--rule));}
+.key.op{background:var(--ink); color:var(--paper-raised); border-color:var(--ink); font-size:27px;}
+.key.op.armed{background:#2E8BD6; border-color:#2E8BD6; color:#FFFFFF;}
+html[data-theme="dark"] .key.op.armed{background:#56AEEF; border-color:#56AEEF; color:#0F1B26;}
+.key.eq{background:var(--margin-red); color:#FBF8EF; border-color:var(--margin-red); font-size:30px;}
+.key.op:active, .key.op.hit{background:color-mix(in srgb, var(--ink) 80%, var(--paper));}
+.key.eq:active, .key.eq.hit{background:color-mix(in srgb, var(--margin-red) 82%, #000);}
+
+/* paper tape */
+.calc-tape{
+  display:none; flex:0 0 auto;
+  background:var(--paper-raised); border:1px solid var(--rule);
+  border-radius:18px; box-shadow:var(--shadow);
+  overflow:hidden; position:relative;
+}
+.calc-tape::before{
+  content:""; position:absolute; top:0; bottom:0; left:30px;
+  width:1px; background:var(--margin-red); opacity:0.4; z-index:1;
+}
+.tape-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px 11px 44px; border-bottom:1px dashed var(--rule);
+  font:600 15px 'Fraunces',Georgia,serif;
+}
+.tape-head button{
+  min-height:32px; padding:0 12px; border-radius:9px;
+  border:1px solid var(--rule); background:transparent; color:var(--ink-soft);
+  font:600 12px 'Inter',sans-serif; cursor:pointer;
+}
+.tape-list{overflow-y:auto; -webkit-overflow-scrolling:touch;}
+.tape-row{
+  display:block; width:100%; text-align:right; border:none; background:none;
+  padding:11px 16px 11px 44px; border-bottom:1px solid var(--rule-soft);
+  cursor:pointer; color:var(--ink);
+}
+.tape-row:active{background:var(--tap);}
+.tape-row .te{display:block; font:400 12.5px 'IBM Plex Mono',monospace; color:var(--ink-soft); word-break:break-all;}
+.tape-row .tr{display:block; font:600 17px 'IBM Plex Mono',monospace; margin-top:2px; word-break:break-all;}
+.tape-empty{padding:22px 16px 22px 44px; font-size:12.5px; color:var(--ink-faint); line-height:1.55;}
+
+/* mobile / sheet: tape swaps in for the keypad */
+.calc.tape-open .calc-keys{display:none;}
+.calc.tape-open .calc-tape{display:flex; flex-direction:column;}
+.calc.tape-open .calc-display{flex:0 0 auto;}
+#calcHome .calc.tape-open .calc-main{flex:0 0 auto;}
+#calcHome .calc.tape-open .calc-tape{flex:1 1 auto; min-height:0;}
+#calcHome .calc.tape-open .tape-list{height:auto; flex:1 1 auto; min-height:0;}
+.calc.tape-open .tape-list{height:calc(5 * clamp(54px, 8.4dvh, 74px) + 40px - 50px);}
+
+/* desktop home: keypad + always-visible tape side by side */
+@media(min-width:900px){
+  #calcHome .calc{display:grid; grid-template-columns:minmax(0,440px) minmax(0,1fr); gap:20px; align-items:stretch; height:auto; min-height:0;}
+  #calcHome .calc.tape-open .calc-main{flex:1 1 auto;}
+  #calcHome .calc-main{height:auto; min-height:0;}
+  #calcHome .calc-keys{grid-auto-rows:66px;}
+  #calcHome .calc-display{min-height:190px; padding-top:18px;}
+  #calcHome .calc-tape{display:flex; flex-direction:column; max-height:620px;}
+  #calcHome .calc-tapebtn{display:none;}
+  #calcHome .calc.tape-open .calc-keys{display:grid;}
+  #calcHome .tape-list{height:auto !important; flex:1;}
+}
+body[data-screen="calc"] .foot{display:none;}
+body[data-screen="calc"] .stage{padding-bottom:14px;}
+
+
+/* ============================================================
+   WATER RIPPLE — blue light from the touch point, rings rolling outward
+   ============================================================ */
+.key{
+  position:relative; overflow:hidden; isolation:isolate;
+  --water:rgba(40,150,225,0.55);          /* halo + wash */
+  --water-core:rgba(185,232,255,0.85);    /* bright centre of the drop */
+  --water-ring:rgba(30,140,220,0.75);     /* the rolling rings */
+}
+.key.op, .key.clear, .key.fn{--water:rgba(60,170,240,0.65); --water-ring:rgba(120,205,255,0.85);}
+.key.eq{--water:rgba(20,120,210,0.80); --water-core:rgba(200,240,255,0.95); --water-ring:rgba(150,220,255,0.95);}
+html[data-theme="dark"] .key{
+  --water:rgba(60,170,245,0.75); --water-core:rgba(170,230,255,0.9); --water-ring:rgba(110,200,255,0.9);
+}
+html[data-theme="dark"] .key .drop,
+html[data-theme="dark"] .key .ring{mix-blend-mode:screen;}
+
+/* on the coloured keys the water becomes a white shimmer, so blue
+   never muddies the key's own colour — the halo outside stays blue */
+html:not([data-theme="dark"]) .key.op,
+html:not([data-theme="dark"]) .key.eq,
+html[data-theme="dark"] .key.eq{
+  --water-core:rgba(255,255,255,0.95); --water-mid:rgba(255,255,255,0.45); --water-ring:rgba(255,255,255,0.95);
+}
+html:not([data-theme="dark"]) .key.op .drop, html:not([data-theme="dark"]) .key.op .ring,
+html:not([data-theme="dark"]) .key.eq .drop, html:not([data-theme="dark"]) .key.eq .ring,
+html[data-theme="dark"] .key.eq .drop, html[data-theme="dark"] .key.eq .ring{mix-blend-mode:soft-light;}
+html[data-theme="dark"] .key.op{
+  --water-core:rgba(150,205,245,0.95); --water-mid:rgba(110,180,235,0.7); --water-ring:rgba(40,130,210,0.95);
+}
+html[data-theme="dark"] .key.op .drop, html[data-theme="dark"] .key.op .ring{mix-blend-mode:multiply;}
+/* armed operator is water-blue itself: shimmer of light on top */
+html[data-theme] .key.op.armed{
+  --water-core:rgba(255,255,255,0.95); --water-mid:rgba(255,255,255,0.45); --water-ring:rgba(255,255,255,0.95);
+}
+html[data-theme] .key.op.armed .drop, html[data-theme] .key.op.armed .ring{mix-blend-mode:soft-light;}
+
+/* halo around the key */
+.key.glow{animation:waterHalo .75s cubic-bezier(.2,.7,.3,1);}
+@keyframes waterHalo{
+  0%  {box-shadow:0 0 0 0 var(--water), 0 0 0 0 var(--water);}
+  22% {box-shadow:0 0 22px 5px var(--water), 0 0 0 2px rgba(80,180,245,0.85);}
+  100%{box-shadow:0 0 36px 12px rgba(40,150,225,0), 0 0 0 0 rgba(40,150,225,0);}
+}
+
+/* soft wash of light where the finger landed */
+.key .drop{
+  position:absolute; z-index:-1; pointer-events:none; border-radius:50%;
+  width:24px; height:24px; margin:-12px 0 0 -12px;
+  background:radial-gradient(circle, var(--water-core) 0%, var(--water-mid, var(--water)) 45%, rgba(40,150,225,0) 72%);
+  transform:scale(0);
+  animation:waterDrop .7s cubic-bezier(.2,.7,.3,1) forwards;
+}
+@keyframes waterDrop{
+  0%  {transform:scale(0);   opacity:1;}
+  60% {opacity:.55;}
+  100%{transform:scale(8.5); opacity:0;}
+}
+
+/* concentric rings that roll out and thin, like a drop on still water */
+.key .ring, .calc-display .ring{
+  position:absolute; z-index:-1; pointer-events:none; border-radius:50%;
+  width:0; height:0; transform:translate(-50%,-50%);
+  border:3px solid var(--water-ring); opacity:0;
+  animation:waterRing .85s cubic-bezier(.15,.65,.35,1) forwards;
+}
+@keyframes waterRing{
+  0%  {width:0;     height:0;     border-width:3px;   opacity:.95;}
+  100%{width:230px; height:230px; border-width:.5px;  opacity:0;}
+}
+
+/* the display ripples when a result lands */
+.calc-display{isolation:isolate;}
+.calc-display .ring{
+  --water-ring:rgba(40,150,225,0.55);
+  animation:displayRing 1.1s cubic-bezier(.15,.65,.35,1) forwards;
+}
+html[data-theme="dark"] .calc-display .ring{--water-ring:rgba(110,200,255,0.6); mix-blend-mode:screen;}
+@keyframes displayRing{
+  0%  {width:0;     height:0;     border-width:3px; opacity:.9;}
+  100%{width:520px; height:520px; border-width:.5px; opacity:0;}
+}
+.calc-display.flash{animation:displayWater .9s ease-out;}
+@keyframes displayWater{
+  0%  {box-shadow:var(--shadow), 0 0 0 0 rgba(40,150,225,0);}
+  30% {box-shadow:var(--shadow), 0 0 30px 5px rgba(40,150,225,0.40), inset 0 0 0 1.5px rgba(40,150,225,0.55);}
+  100%{box-shadow:var(--shadow), 0 0 0 0 rgba(40,150,225,0);}
+}
+.calc-result{transform-origin:right bottom;}
+.calc-result.pop{animation:resultPop .55s cubic-bezier(.2,.9,.3,1.3);}
+@keyframes resultPop{
+  0%  {transform:scale(0.94); text-shadow:0 0 0 rgba(40,150,225,0);}
+  40% {transform:scale(1.04); text-shadow:0 0 20px rgba(40,150,225,0.6);}
+  100%{transform:scale(1);    text-shadow:0 0 0 rgba(40,150,225,0);}
+}
+
+/* ============================================================
+   CALCULATOR SHEET (opened from any other screen)
+   ============================================================ */
+.sheet-backdrop{
+  position:fixed; inset:0; z-index:78; background:rgba(15,20,25,0.42);
+  opacity:0; pointer-events:none; transition:opacity .22s ease;
+}
+.sheet-backdrop.show{opacity:1; pointer-events:auto;}
+.sheet{
+  position:fixed; left:0; right:0; bottom:0; z-index:80;
+  max-width:480px; margin:0 auto;
+  background:var(--paper); border:1px solid var(--rule); border-bottom:none;
+  border-radius:24px 24px 0 0; box-shadow:none; visibility:hidden;
+  padding:0 14px calc(14px + env(safe-area-inset-bottom));
+  transform:translateY(105%);
+  transition:transform .3s cubic-bezier(.32,.72,0,1), visibility 0s linear .3s;
+  max-height:94dvh; overflow-y:auto;
+}
+.sheet.show{transform:translateY(0); visibility:visible; box-shadow:0 -10px 40px rgba(0,0,0,0.22);
+  transition:transform .3s cubic-bezier(.32,.72,0,1), visibility 0s;}
+.sheet-grab{display:flex; justify-content:center; padding:10px 0 8px; touch-action:none;}
+.sheet-handle{
+  width:56px; height:22px; border:none; background:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.sheet-handle::before{content:""; width:40px; height:5px; border-radius:3px; background:var(--rule);}
+.sheet .calc-display{min-height:128px; flex:0 0 auto;}
+.sheet .calc-result{font-size:38px;}
+.sheet .calc-keys{grid-auto-rows:clamp(50px, 7.2dvh, 64px); gap:9px;}
+.sheet .calc.tape-open .tape-list{height:calc(5 * clamp(50px, 7.2dvh, 64px) + 36px - 50px);}
+#calcBtn[hidden]{display:none;}
+
+/* footer */
+.foot{
+  margin-top:26px; padding-top:16px; border-top:1px solid var(--rule-soft);
+  font-size:11.5px; color:var(--ink-faint); line-height:1.6;
+}
+</style>
+</head>
+<body data-screen="calc">
+<div class="appbar">
+  <div class="appbar-in">
+    <div class="brand">
+      <div class="seal">EXACT<br>VALUE</div>
+      <div>
+        <h1>Asset Calculator</h1>
+        <div class="sub">Loans, deposits, value over time, and units</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="calcBtn" aria-label="Open calculator" title="Calculator" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><rect x="8" y="5.5" width="8" height="3.5" rx="0.8"/><path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 16.5h.01M12 16.5h.01M15.5 16.5h.01"/></svg>
+    </button>
+    <button class="iconbtn" id="themeBtn" aria-label="Switch theme" title="Switch theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="themeIcon">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<nav class="tabbar" id="tabbar">
+  <button class="active" data-screen="calc" aria-label="Calculator">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><rect x="8" y="5.5" width="8" height="3.5" rx="0.8"/><path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 16.5h.01M12 16.5h.01M15.5 16.5h.01"/></svg>
+    Calc
+  </button>
+  <button data-screen="loan" aria-label="Loan">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><circle cx="12" cy="12.5" r="2.8"/><path d="M6 10v5M18 10v5"/></svg>
+    Loan
+  </button>
+  <button data-screen="invest" aria-label="Invest">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5.5-6 4 3.5L21 6"/><path d="M15.5 6H21v5.5"/></svg>
+    Invest
+  </button>
+  <button data-screen="deposit" aria-label="Deposits">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 4l9 5.5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M2.5 20.5h19"/></svg>
+    Deposits
+  </button>
+  <button data-screen="value" aria-label="Value">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.3 9.4h4.2a1.9 1.9 0 0 1 0 3.8h-3a1.9 1.9 0 0 0 0 3.8h4.2"/></svg>
+    Value
+  </button>
+  <button data-screen="units" aria-label="Units">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="20" height="8" rx="2"/><path d="M6.5 8v3.5M10 8v5M13.5 8v3.5M17 8v5"/></svg>
+    Units
+  </button>
+</nav>
+
+<main class="stage">
+
+<!-- ============================================================ LOAN ============================================================ -->
+<!-- ============================================================ CALCULATOR ============================================================ -->
+<section class="screen active" id="screen-calc">
+  <div id="calcHome">
+    <div class="calc" id="calc">
+      <div class="calc-main">
+        <div class="calc-display" id="calcDisplay">
+          <button class="calc-tapebtn" id="calcTapeBtn" aria-label="Show tape">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>
+            <span id="calcTapeLbl">Tape</span> <b id="calcTapeCount"></b>
+          </button>
+          <div class="calc-expr" id="calcExpr"></div>
+          <div class="calc-result" id="calcResult" title="Tap to copy">0</div>
+          <div class="calc-words" id="calcWords"></div>
+        </div>
+        <div class="calc-use" id="calcUseWrap"><button id="calcUse"></button></div>
+        <div class="calc-keys" id="calcKeys">
+          <button class="key fn clear" data-k="C">AC</button>
+          <button class="key fn" data-k="B" aria-label="Backspace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M13 9.5l5 5M18 9.5l-5 5"/></svg></button>
+          <button class="key fn" data-k="%">%</button>
+          <button class="key op" data-k="/" aria-label="Divide">÷</button>
+          <button class="key" data-k="7">7</button>
+          <button class="key" data-k="8">8</button>
+          <button class="key" data-k="9">9</button>
+          <button class="key op" data-k="*" aria-label="Multiply">×</button>
+          <button class="key" data-k="4">4</button>
+          <button class="key" data-k="5">5</button>
+          <button class="key" data-k="6">6</button>
+          <button class="key op" data-k="-" aria-label="Minus">−</button>
+          <button class="key" data-k="1">1</button>
+          <button class="key" data-k="2">2</button>
+          <button class="key" data-k="3">3</button>
+          <button class="key op" data-k="+" aria-label="Plus">+</button>
+          <button class="key" data-k="00">00</button>
+          <button class="key" data-k="0">0</button>
+          <button class="key" data-k=".">.</button>
+          <button class="key eq" data-k="=" aria-label="Equals">=</button>
+        </div>
+      </div>
+      <aside class="calc-tape" id="calcTape">
+        <div class="tape-head"><span>Tape</span><button id="tapeClear">Clear</button></div>
+        <div class="tape-list" id="tapeList"></div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="screen-loan">
+  <div class="screen-head">
+    <h2>Loan &amp; EMI</h2>
+    <p><b>Bank EMI</b> is the standard loan EMI: interest compounded monthly on the balance you still owe. The two <b>full amount</b> options are for unusual loans that charge interest on the whole sum for the whole tenure, even as you repay it.</p>
+  </div>
+
+  <div class="seg-row">
+    <div>
+      <span class="seg-label">Interest method</span>
+      <div class="seg" id="seg-interest">
+        <button class="active" data-val="reducing">Bank EMI<br>(standard)</button>
+        <button data-val="compound">Compound on<br>full amount</button>
+        <button data-val="simple">Simple on<br>full amount</button>
+      </div>
+    </div>
+    <div>
+      <span class="seg-label">Solve for</span>
+      <div class="seg" id="seg-solve">
+        <button class="active" data-val="emi">Find EMI</button>
+        <button data-val="amount">Find loan amount</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Loan details</h3>
+
+      <div class="field" id="field-amount">
+        <label for="loanAmount">Loan amount (₹)</label>
+        <input type="number" id="loanAmount" value="1000000" min="0" inputmode="decimal">
+        <p class="words" id="loanAmountWords"></p>
+        <div class="quickrow" data-target="loanAmount">
+          <button data-add="100000">+1 L</button>
+          <button data-add="500000">+5 L</button>
+          <button data-add="1000000">+10 L</button>
+          <button data-set="0">Clear</button>
+        </div>
+      </div>
+
+      <div class="field" id="field-emi" style="display:none;">
+        <label for="loanEmiInput">EMI you can afford (₹ / month)</label>
+        <input type="number" id="loanEmiInput" value="20000" min="0" inputmode="decimal">
+        <p class="words" id="loanEmiWords"></p>
+      </div>
+
+      <div class="field">
+        <label for="loanRate">Interest rate (% per year)</label>
+        <input type="number" id="loanRate" value="9.5" step="0.01" min="0" inputmode="decimal">
+      </div>
+
+      <div class="field" id="field-comp-freq">
+        <label for="loanCompFreq">Compounding</label>
+        <select id="loanCompFreq">
+          <option value="1" selected>Yearly</option>
+          <option value="2">Half-yearly</option>
+          <option value="4">Quarterly</option>
+          <option value="12">Monthly</option>
+        </select>
+        <p class="hint">Only for <b>Compound on full amount</b>. A Bank EMI always compounds monthly on the balance owed.</p>
+      </div>
+
+      <div class="field">
+        <label>Tenure</label>
+        <div class="row">
+          <input type="number" id="loanTenure" value="20" min="0" step="0.01" inputmode="decimal">
+          <select id="loanTenureUnit" style="max-width:130px;">
+            <option value="years" selected>Years</option>
+            <option value="months">Months</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="moratMonths">Moratorium (months of no EMI)</label>
+        <input type="number" id="moratMonths" value="0" min="0" inputmode="decimal">
+        <p class="hint">An EMI holiday at the start of the loan. Leave at 0 if there isn't one.</p>
+      </div>
+
+      <div class="field" id="field-morat-treatment" style="display:none;">
+        <label for="moratTreatment">Interest during the moratorium</label>
+        <select id="moratTreatment">
+          <option value="capitalize">Added to principal — EMI recalculated after</option>
+          <option value="payNow">Paid as it accrues — principal untouched</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ledger" id="loanLedger"></div>
+  </div>
+
+  <div class="vs" id="loanVs"></div>
+
+  <button class="disclose" id="amortToggle" aria-expanded="false">
+    <span>Amortisation schedule</span><span class="caret">▼</span>
+  </button>
+  <div class="amort" id="amortWrap">
+    <div class="amort-tools">
+      <div class="seg" id="seg-amort-view">
+        <button class="active" data-val="year">Year by year</button>
+        <button data-val="month">Every month</button>
+      </div>
+      <button class="linkbtn" id="amortCsv">Download CSV</button>
+    </div>
+    <div id="amortOut"></div>
+  </div>
+
+  <div class="note" id="loanNote" style="display:none;"></div>
+</section>
+
+<!-- ============================================================ INVEST ============================================================ -->
+<section class="screen" id="screen-invest">
+  <div class="screen-head">
+    <h2>Investments</h2>
+    <p>Monthly SIP or a one-time lump sum, solved either direction.</p>
+  </div>
+
+  <div class="chips" id="investChips">
+    <button class="active" data-sub="sip">SIP</button>
+    <button data-sub="lump">Lump sum</button>
+  </div>
+
+  <div id="sub-sip">
+    <div class="seg-row">
+      <div>
+        <span class="seg-label">Solve for</span>
+        <div class="seg" id="seg-sip-solve">
+          <button class="active" data-val="fv">Find future value</button>
+          <button data-val="sip">Find monthly SIP</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>SIP details</h3>
+        <div class="field" id="field-sip-amount">
+          <label for="sipAmount">Monthly SIP (₹)</label>
+          <input type="number" id="sipAmount" value="10000" min="0" inputmode="decimal">
+          <p class="words" id="sipAmountWords"></p>
+        </div>
+        <div class="field" id="field-sip-target" style="display:none;">
+          <label for="sipTarget">Target amount (₹)</label>
+          <input type="number" id="sipTarget" value="5000000" min="0" inputmode="decimal">
+          <p class="words" id="sipTargetWords"></p>
+        </div>
+        <div class="field">
+          <label for="sipRate">Expected return (% per year)</label>
+          <input type="number" id="sipRate" value="12" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="sipYears">Duration (years)</label>
+          <input type="number" id="sipYears" value="15" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="sipStepUp">Annual step-up (%)</label>
+          <input type="number" id="sipStepUp" value="0" step="0.5" min="0" inputmode="decimal">
+          <p class="hint">Raise the SIP by this much every year. Set 0 for a fixed SIP.</p>
+        </div>
+        <p class="hint">Invested at the start of each month and compounded monthly — the usual SIP convention.</p>
+      </div>
+      <div class="ledger" id="sipLedger"></div>
+    </div>
+  </div>
+
+  <div id="sub-lump" style="display:none;">
+    <div class="seg-row">
+      <div>
+        <span class="seg-label">Solve for</span>
+        <div class="seg" id="seg-lump-solve">
+          <button class="active" data-val="fv">Find future value</button>
+          <button data-val="pv">Find amount needed today</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>Lump sum details</h3>
+        <div class="field" id="field-lump-pv">
+          <label for="lumpPV">Amount invested today (₹)</label>
+          <input type="number" id="lumpPV" value="500000" min="0" inputmode="decimal">
+          <p class="words" id="lumpPVWords"></p>
+        </div>
+        <div class="field" id="field-lump-fv" style="display:none;">
+          <label for="lumpFV">Target amount (₹)</label>
+          <input type="number" id="lumpFV" value="1500000" min="0" inputmode="decimal">
+          <p class="words" id="lumpFVWords"></p>
+        </div>
+        <div class="field">
+          <label for="lumpRate">Expected return (% per year)</label>
+          <input type="number" id="lumpRate" value="11" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="lumpYears">Duration (years)</label>
+          <input type="number" id="lumpYears" value="10" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="lumpFreq">Compounding</label>
+          <select id="lumpFreq">
+            <option value="1">Yearly</option>
+            <option value="2">Half-yearly</option>
+            <option value="4">Quarterly</option>
+            <option value="12" selected>Monthly</option>
+            <option value="365">Daily</option>
+          </select>
+        </div>
+      </div>
+      <div class="ledger" id="lumpLedger"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ DEPOSITS ============================================================ -->
+<section class="screen" id="screen-deposit">
+  <div class="screen-head">
+    <h2>Fixed &amp; recurring deposits</h2>
+    <p>Bank-style maturity working, with tenure in years, months and days.</p>
+  </div>
+
+  <div class="chips" id="depChips">
+    <button class="active" data-sub="fd">Fixed deposit</button>
+    <button data-sub="rd">Recurring deposit</button>
+  </div>
+
+  <!-- FD -->
+  <div id="sub-fd">
+    <div class="seg-row">
+      <div>
+        <span class="seg-label">Payout style</span>
+        <div class="seg" id="seg-fd-type">
+          <button class="active" data-val="cumulative">Cumulative<br>(reinvest)</button>
+          <button data-val="payout">Periodic payout</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>Deposit details</h3>
+        <div class="field">
+          <label for="fdAmount">Deposit amount (₹)</label>
+          <input type="number" id="fdAmount" value="500000" min="0" inputmode="decimal">
+          <p class="words" id="fdAmountWords"></p>
+          <div class="quickrow" data-target="fdAmount">
+            <button data-add="50000">+50 K</button>
+            <button data-add="100000">+1 L</button>
+            <button data-add="500000">+5 L</button>
+            <button data-set="0">Clear</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fdRate">Interest rate (% per year)</label>
+          <input type="number" id="fdRate" value="7.1" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>Tenure</label>
+          <div class="tenure">
+            <div><input type="number" id="fdY" value="3" min="0" inputmode="decimal"><span class="unit-cap">Years</span></div>
+            <div><input type="number" id="fdM" value="0" min="0" inputmode="decimal"><span class="unit-cap">Months</span></div>
+            <div><input type="number" id="fdD" value="0" min="0" inputmode="decimal"><span class="unit-cap">Days</span></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fdFreq">Compounding</label>
+          <select id="fdFreq">
+            <option value="1">Yearly</option>
+            <option value="2">Half-yearly</option>
+            <option value="4" selected>Quarterly</option>
+            <option value="12">Monthly</option>
+            <option value="365">Daily</option>
+          </select>
+          <p class="hint">Most Indian banks compound quarterly on cumulative FDs.</p>
+        </div>
+        <div class="field" id="field-fd-payout" style="display:none;">
+          <label for="fdPayoutFreq">Payout frequency</label>
+          <select id="fdPayoutFreq">
+            <option value="12">Monthly</option>
+            <option value="4" selected>Quarterly</option>
+            <option value="2">Half-yearly</option>
+            <option value="1">Yearly</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fdSenior">Senior citizen extra rate (%)</label>
+          <input type="number" id="fdSenior" value="0" step="0.05" min="0" inputmode="decimal">
+          <p class="hint">Banks usually add 0.25–0.75%. Leave 0 if it doesn't apply.</p>
+        </div>
+        <div class="field">
+          <label>Tax on interest (optional)</label>
+          <div class="row">
+            <input type="number" id="fdTds" value="0" step="1" min="0" max="100" inputmode="decimal" aria-label="Tax rate percent">
+            <select id="fdTdsBasis" style="max-width:150px;">
+              <option value="slab">% of interest</option>
+            </select>
+          </div>
+          <p class="hint">Enter your own rate (TDS is commonly 10%, but you're taxed at your slab). Leave 0 to see pre-tax figures.</p>
+        </div>
+      </div>
+      <div class="ledger" id="fdLedger"></div>
+    </div>
+
+    <button class="disclose" id="fdSchedToggle" aria-expanded="false">
+      <span>Year-wise growth</span><span class="caret">▼</span>
+    </button>
+    <div class="amort" id="fdSchedWrap"><div id="fdSchedOut"></div></div>
+  </div>
+
+  <!-- RD -->
+  <div id="sub-rd" style="display:none;">
+    <div class="grid">
+      <div class="card">
+        <h3>Recurring deposit</h3>
+        <div class="field">
+          <label for="rdAmount">Monthly instalment (₹)</label>
+          <input type="number" id="rdAmount" value="10000" min="0" inputmode="decimal">
+          <p class="words" id="rdAmountWords"></p>
+          <div class="quickrow" data-target="rdAmount">
+            <button data-add="1000">+1 K</button>
+            <button data-add="5000">+5 K</button>
+            <button data-add="10000">+10 K</button>
+            <button data-set="0">Clear</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="rdRate">Interest rate (% per year)</label>
+          <input type="number" id="rdRate" value="6.9" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>Tenure</label>
+          <div class="tenure">
+            <div><input type="number" id="rdY" value="2" min="0" inputmode="decimal"><span class="unit-cap">Years</span></div>
+            <div><input type="number" id="rdM" value="0" min="0" inputmode="decimal"><span class="unit-cap">Months</span></div>
+            <div><input type="number" id="rdD" value="0" min="0" inputmode="decimal"><span class="unit-cap">Days</span></div>
+          </div>
+          <p class="hint">RDs run in whole months. Leftover days are paid simple interest at the same rate, the way most banks handle a broken period.</p>
+        </div>
+        <div class="field">
+          <label for="rdFreq">Compounding</label>
+          <select id="rdFreq">
+            <option value="4" selected>Quarterly</option>
+            <option value="12">Monthly</option>
+            <option value="2">Half-yearly</option>
+            <option value="1">Yearly</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rdTds">Tax on interest (%)</label>
+          <input type="number" id="rdTds" value="0" step="1" min="0" max="100" inputmode="decimal">
+        </div>
+      </div>
+      <div class="ledger" id="rdLedger"></div>
+    </div>
+
+    <button class="disclose" id="rdSchedToggle" aria-expanded="false">
+      <span>Month-wise build-up</span><span class="caret">▼</span>
+    </button>
+    <div class="amort" id="rdSchedWrap"><div id="rdSchedOut"></div></div>
+  </div>
+</section>
+
+<!-- ============================================================ VALUE / INFLATION ============================================================ -->
+<section class="screen" id="screen-value">
+  <div class="screen-head">
+    <h2>Value over time</h2>
+    <p>What money grows to, what it will cost, and what it's actually worth once inflation is taken out.</p>
+  </div>
+
+  <div class="seg-row">
+    <div>
+      <span class="seg-label">Question</span>
+      <div class="seg" id="seg-val-mode">
+        <button class="active" data-val="grow">Grow<br>an amount</button>
+        <button data-val="cost">Future<br>cost</button>
+        <button data-val="back">Worth<br>today</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Inputs <span class="tag" id="valTag">Growth</span></h3>
+      <div class="field">
+        <label for="valAmount" id="valAmountLabel">Amount today (₹)</label>
+        <input type="number" id="valAmount" value="1000000" min="0" inputmode="decimal">
+        <p class="words" id="valAmountWords"></p>
+      </div>
+      <div class="field" id="field-val-return">
+        <label for="valReturn">Return on the money (% per year)</label>
+        <input type="number" id="valReturn" value="8" step="0.01" min="0" inputmode="decimal">
+        <p class="hint">Set 0 if the money just sits there.</p>
+      </div>
+      <div class="field">
+        <label for="valInflation">Inflation (% per year)</label>
+        <input type="number" id="valInflation" value="6" step="0.01" min="0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label for="valYears">Years</label>
+        <input type="number" id="valYears" value="15" step="0.5" min="0" inputmode="decimal">
+        <div class="quickrow" data-target="valYears">
+          <button data-set="5">5 yr</button>
+          <button data-set="10">10 yr</button>
+          <button data-set="20">20 yr</button>
+          <button data-set="30">30 yr</button>
+        </div>
+      </div>
+    </div>
+    <div class="ledger" id="valLedger"></div>
+  </div>
+
+  <button class="disclose" id="valTblToggle" aria-expanded="false">
+    <span>Year-by-year table</span><span class="caret">▼</span>
+  </button>
+  <div class="amort" id="valTblWrap"><div id="valTblOut"></div></div>
+</section>
+
+<!-- ============================================================ UNITS ============================================================ -->
+<section class="screen" id="screen-units">
+  <div class="screen-head">
+    <h2>Unit conversion</h2>
+    <p>Type a number, pick two units. Everything else in the category updates underneath — tap any line to copy it.</p>
+  </div>
+
+  <div class="chips" id="convCats"></div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Convert <span class="tag" id="convTag"></span></h3>
+      <div class="conv-io">
+        <div class="field" style="margin-bottom:0;">
+          <label for="convInput">From</label>
+          <input type="number" id="convInput" value="1" step="any" inputmode="decimal">
+          <select id="convFrom" style="margin-top:8px;"></select>
+        </div>
+        <button class="swap" id="convSwap" aria-label="Swap units">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M7 20l-3.2-3.4M7 20l3.2-3.4"/><path d="M17 20V4M17 4l-3.2 3.4M17 4l3.2 3.4"/></svg>
+        </button>
+        <div class="field" style="margin-bottom:0;">
+          <label for="convTo">To</label>
+          <div class="conv-out" id="convResult">—</div>
+          <select id="convTo" style="margin-top:8px;"></select>
+        </div>
+      </div>
+      <p class="hint" id="convNote" style="margin-top:14px;"></p>
+    </div>
+
+    <div class="card">
+      <h3>All units <span class="tag">tap to copy</span></h3>
+      <div class="alllist" id="convAll"></div>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  Figures are indicative. Banks and lenders round day counts, rest periods and broken periods slightly differently, so a real sanction letter or FD receipt may differ by a small amount.
+</div>
+
+</main>
+
+<div class="answerbar" id="answerbar">
+  <div>
+    <div class="k" id="abKey">Result</div>
+    <div class="v" id="abVal">—</div>
+  </div>
+  <button class="up" id="abUp">See detail</button>
+</div>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+<div class="sheet" id="calcSheet" role="dialog" aria-modal="true" aria-label="Calculator" aria-hidden="true">
+  <div class="sheet-grab" id="sheetGrab"><button class="sheet-handle" id="sheetClose" aria-label="Close calculator"></button></div>
+  <div id="sheetBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const $ = id => document.getElementById(id);
+/* every field is a non-negative quantity, except the two on the Value screen
+   where deflation or a losing return are real possibilities */
+const SIGNED = {valInflation:1, valReturn:1};
+const num = id => {
+  const v = parseFloat($(id).value);
+  if(!isFinite(v)) return 0;
+  if(SIGNED[id]) return Math.max(-99, Math.min(v, 100));
+  if(/Rate$|StepUp$|Senior$|Tds$/.test(id)) return Math.min(Math.max(0, v), 100);   // % per year
+  return Math.max(0, v);
+};
+const MAX_YEARS = 100;                                   // keeps every loop bounded
+const capYears = y => Math.min(Math.max(0, y), MAX_YEARS);
+
+const fmt = n => {
+  if(!isFinite(n)) return '—';
+  const r = Math.round(n);
+  return (r < 0 ? '-' : '') + '₹' + Math.abs(r).toLocaleString('en-IN');
+};
+const fmt2 = n => isFinite(n)
+  ? (n < 0 ? '-' : '') + '₹' + Math.abs(n).toLocaleString('en-IN', {maximumFractionDigits:2, minimumFractionDigits:2})
+  : '—';
+const pct = n => isFinite(n) ? n.toFixed(2) + '%' : '—';
+
+function compact(v){
+  if(!isFinite(v)) return '—';
+  const a = Math.abs(v), s = v < 0 ? '-' : '';
+  const r2 = x => Math.round(x*100)/100;          // what toFixed(2) will show
+  if(r2(a/1e5) >= 100) return s + '₹' + (a/1e7).toFixed(2) + ' Cr';
+  if(r2(a/1e3) >= 100) return s + '₹' + (a/1e5).toFixed(2) + ' L';
+  if(Math.round(a) >= 1000) return s + '₹' + (a/1e3).toFixed(2) + ' K';
+  return fmt(v);
+}
+
+/* ---------- Indian number to words ---------- */
+const W_ONES = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+  'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+const W_TENS = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+
+function w2(n){
+  if(n < 20) return W_ONES[n];
+  const t = Math.floor(n/10), o = n%10;
+  return W_TENS[t] + (o ? ' ' + W_ONES[o] : '');
+}
+function w3(n){
+  const h = Math.floor(n/100), r = n%100;
+  let s = '';
+  if(h) s += W_ONES[h] + ' Hundred';
+  if(r) s += (s ? ' ' : '') + w2(r);
+  return s;
+}
+function inWordsIndian(n){
+  n = Math.floor(Math.abs(n));
+  if(!isFinite(n)) return '';
+  if(n === 0) return 'Zero';
+  if(n > 1e15) return 'a very large number';
+  const parts = [];
+  const crore = Math.floor(n/1e7); n %= 1e7;
+  const lakh  = Math.floor(n/1e5); n %= 1e5;
+  const thou  = Math.floor(n/1e3); n %= 1e3;
+  if(crore) parts.push((crore > 999 ? inWordsIndian(crore) : w3(crore)) + ' Crore');
+  if(lakh)  parts.push(w2(lakh) + ' Lakh');
+  if(thou)  parts.push(w2(thou) + ' Thousand');
+  if(n)     parts.push(w3(n));
+  return parts.join(' ');
+}
+function rupeesInWords(v){
+  if(!isFinite(v)) return '';
+  const neg = v < 0;
+  v = Math.abs(v);
+  let whole = Math.floor(v);
+  let paise = Math.round((v - whole) * 100);
+  if(paise === 100){ whole += 1; paise = 0; }
+  if(whole === 0 && paise === 0) return '';
+  let s = whole > 0 ? inWordsIndian(whole) + ' Rupees' : '';
+  if(paise) s += (s ? ' and ' : '') + w2(paise) + ' Paise';
+  return (neg ? 'Minus ' : '') + s + ' Only';
+}
+
+/* bind a money input to its words line */
+function bindWords(inputId, outId){
+  const inp = $(inputId), out = $(outId);
+  if(!inp || !out) return;
+  const paint = () => {
+    const v = parseFloat(inp.value);
+    out.textContent = (isFinite(v) && v !== 0) ? rupeesInWords(v) + '  ·  ' + compact(v) : '';
+  };
+  inp.addEventListener('input', paint);
+  paint();
+}
+
+/* toast */
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+}
+function copyText(s){
+  const done = () => toast('Copied  ' + (s.length > 26 ? s.slice(0,26) + '…' : s));
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(s).then(done).catch(() => fallbackCopy(s, done));
+  } else fallbackCopy(s, done);
+}
+function fallbackCopy(s, done){
+  const ta = document.createElement('textarea');
+  ta.value = s; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){ toast('Copy not available'); }
+  document.body.removeChild(ta);
+}
+
+/* split bar */
+function barHTML(pctA, labelA, labelB){
+  const a = Math.max(0, Math.min(100, isFinite(pctA) ? pctA : 0));
+  return '<div class="bar"><div class="a" style="width:' + a + '%"></div>' +
+         '<div class="b" style="width:' + (100 - a) + '%"></div></div>' +
+         '<div class="bar-legend">' +
+         '<span><i class="dot" style="background:var(--growth)"></i>' + labelA + '</span>' +
+         '<span><i class="dot" style="background:var(--cost)"></i>' + labelB + '</span></div>';
+}
+function line(lbl, val, cls){
+  return '<div class="ledger-line"><span class="lbl">' + lbl +
+         '</span><span class="val ' + (cls || '') + '">' + val + '</span></div>';
+}
+
+/* CSV download */
+function downloadCSV(filename, rows){
+  const csv = rows.map(r => r.map(c => {
+    const s = String(c);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+/* ============================================================
+   THEME
+   ============================================================ */
+const SUN = '<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M19.1 4.9l-1.7 1.7M6.6 17.4l-1.7 1.7"/>';
+const MOON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+
+function readStored(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function writeStored(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+function applyTheme(mode){
+  document.documentElement.setAttribute('data-theme', mode);
+  $('themeIcon').innerHTML = mode === 'dark' ? SUN : MOON;
+  writeStored('ac-theme', mode);
+}
+(function initTheme(){
+  const saved = readStored('ac-theme');
+  const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (sysDark ? 'dark' : 'light'));
+})();
+$('themeBtn').onclick = () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+};
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+document.querySelectorAll('#tabbar button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('#tabbar button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $('screen-' + b.dataset.screen).classList.add('active');
+    document.body.dataset.screen = b.dataset.screen;
+    $('calcBtn').hidden = b.dataset.screen === 'calc';
+    if(typeof closeCalcSheet === 'function') closeCalcSheet();
+    // best effort: sandboxed frames (e.g. a published artifact) refuse URL changes
+    try{ if(history.replaceState) history.replaceState(null, '', '#' + b.dataset.screen); }catch(e){}
+    window.scrollTo(0, 0);
+    updateAnswerBar();
+  };
+});
+
+function chipGroup(containerId, onChange){
+  const el = $(containerId);
+  el.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      el.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      onChange(b.dataset.sub);
+      updateAnswerBar();
+    };
+  });
+}
+chipGroup('investChips', v => {
+  $('sub-sip').style.display  = v === 'sip'  ? '' : 'none';
+  $('sub-lump').style.display = v === 'lump' ? '' : 'none';
+});
+chipGroup('depChips', v => {
+  $('sub-fd').style.display = v === 'fd' ? '' : 'none';
+  $('sub-rd').style.display = v === 'rd' ? '' : 'none';
+});
+
+/* segmented control */
+function seg(id, onChange){
+  const el = $(id);
+  let val = el.querySelector('button.active').dataset.val;
+  el.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      el.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      val = b.dataset.val;
+      onChange(val);
+    };
+  });
+  return { get: () => val };
+}
+
+/* disclosure panels */
+function disclose(btnId, wrapId, onOpen){
+  const b = $(btnId), w = $(wrapId);
+  b.onclick = () => {
+    const open = w.classList.toggle('open');
+    b.classList.toggle('open', open);
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if(open && onOpen) onOpen();
+  };
+}
+
+/* quick-add buttons under numeric fields */
+document.querySelectorAll('.quickrow').forEach(row => {
+  const target = row.dataset.target;
+  row.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      const inp = $(target);
+      if(b.dataset.set !== undefined) inp.value = b.dataset.set;
+      else inp.value = (parseFloat(inp.value) || 0) + parseFloat(b.dataset.add);
+      inp.dispatchEvent(new Event('input', {bubbles:true}));
+      inp.dispatchEvent(new Event('change', {bubbles:true}));
+    };
+  });
+});
+
+/* wire a set of inputs to a recompute function */
+function wire(ids, fn){
+  ids.forEach(id => {
+    const el = $(id);
+    if(!el) return;
+    el.addEventListener('input', fn);
+    el.addEventListener('change', fn);
+  });
+}
+
+/* ============================================================
+   STICKY ANSWER BAR
+   ============================================================ */
+function activeLedger(){
+  const screen = document.querySelector('.screen.active');
+  if(!screen) return null;
+  const list = screen.querySelectorAll('.ledger');
+  for(const l of list){
+    if(l.offsetParent !== null && l.innerHTML.trim() !== '') return l;
+  }
+  return null;
+}
+let barTick = false;
+function updateAnswerBar(){
+  const bar = $('answerbar');
+  if(window.innerWidth >= 900){ bar.classList.remove('show'); return; }
+  const led = activeLedger();
+  if(!led){ bar.classList.remove('show'); return; }
+  const head = led.querySelector('.ledger-head');
+  if(!head){ bar.classList.remove('show'); return; }
+  const r = head.getBoundingClientRect();
+  if(r.bottom < 64){
+    $('abKey').textContent = head.querySelector('.eyebrow')?.textContent || 'Result';
+    $('abVal').textContent = head.querySelector('.big')?.textContent || '—';
+    bar.classList.add('show');
+  } else {
+    bar.classList.remove('show');
+  }
+}
+window.addEventListener('scroll', () => {
+  if(barTick) return;
+  barTick = true;
+  requestAnimationFrame(() => { updateAnswerBar(); barTick = false; });
+}, {passive:true});
+$('abUp').onclick = () => window.scrollTo({top:0, behavior:'smooth'});
+
+/* keep sticky offsets honest — measure, don't guess */
+function measureChrome(){
+  const bar = document.querySelector('.appbar');
+  const rail = $('tabbar');
+  const root = document.documentElement.style;
+  root.setProperty('--appbar-h', Math.round(bar.getBoundingClientRect().height) + 'px');
+  if(window.innerWidth >= 900){
+    root.setProperty('--rail-h', Math.round(rail.getBoundingClientRect().height) + 'px');
+  }
+}
+window.addEventListener('resize', () => { measureChrome(); updateAnswerBar(); });
+window.addEventListener('orientationchange', () => setTimeout(measureChrome, 250));
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(measureChrome);
+measureChrome();
+
+/* ============================================================
+   LOAN
+   ============================================================ */
+const interestSeg = seg('seg-interest', () => computeLoan());
+const solveSeg = seg('seg-solve', v => {
+  $('field-amount').style.display = v === 'emi' ? '' : 'none';
+  $('field-emi').style.display    = v === 'amount' ? '' : 'none';
+  computeLoan();
+});
+const amortViewSeg = seg('seg-amort-view', () => renderAmort());
+
+/*
+  Both methods charge interest on the FULL loan amount for the whole tenure
+  (not on the reducing balance). The total is then split into equal EMIs.
+    Simple   : total = P × (1 + r·t)
+    Compound : total = P × (1 + r/f)^(f·t)   — whole periods compounded,
+                                                any broken period at simple rate
+*/
+function simpleFactor(rate, months){
+  return 1 + (rate/100) * (months/12);
+}
+function compoundFactor(rate, months, f){
+  const i = rate/100/f;
+  const periods = f * months/12;
+  const whole = Math.floor(periods + 1e-9);
+  const frac = periods - whole;
+  return Math.pow(1+i, whole) * (1 + i*frac);
+}
+function growthFactor(method, rate, months, f){
+  return method === 'compound' ? compoundFactor(rate, months, f) : simpleFactor(rate, months);
+}
+
+/* standard bank (reducing-balance) EMI — used only as a comparison benchmark */
+function bankEMI(P, rate, n){
+  const r = rate/1200;
+  if(n <= 0) return 0;
+  if(r === 0) return P/n;
+  const x = Math.pow(1+r, n);
+  return P * r * x / (x-1);
+}
+/* the reducing-balance rate a bank would need to charge for the same EMI */
+function equivalentBankRate(P, EMI, n){
+  if(n <= 0 || P <= 0 || EMI*n <= P) return 0;
+  let lo = 0, hi = 300;
+  for(let k = 0; k < 90; k++){
+    const mid = (lo+hi)/2;
+    if(bankEMI(P, mid, n) < EMI) lo = mid; else hi = mid;
+  }
+  return (lo+hi)/2;
+}
+
+function tenureMonths(){
+  const t = num('loanTenure');
+  return Math.min(MAX_YEARS*12, Math.max(0, Math.round($('loanTenureUnit').value === 'years' ? t*12 : t)));
+}
+function loanInputs(){
+  const months = tenureMonths();
+  return {
+    amount: num('loanAmount'),
+    emi: num('loanEmiInput'),
+    rate: num('loanRate'),
+    freq: parseInt($('loanCompFreq').value, 10) || 1,
+    months: months,
+    morat: Math.min(Math.max(0, num('moratMonths')), Math.max(months-1, 0)),
+    moratTreat: $('moratTreatment').value,
+    method: interestSeg.get(),
+    solveMode: solveSeg.get()
+  };
+}
+
+/* one full working for a given method */
+function priceLoan(inp, method){
+  if(method === 'reducing') return priceReducing(inp);
+  const n = inp.months - inp.morat;
+  const grow = inp.morat > 0 ? growthFactor(method, inp.rate, inp.morat, inp.freq) : 1;
+  const loanF = n > 0 ? growthFactor(method, inp.rate, n, inp.freq) : 1;
+
+  let P, EMI, base, moratInterest = 0;
+
+  if(inp.solveMode === 'emi'){
+    P = inp.amount;
+    if(inp.morat > 0){
+      if(inp.moratTreat === 'capitalize'){ base = P*grow; moratInterest = base - P; }
+      else { base = P; moratInterest = P*(grow-1); }
+    } else base = P;
+    EMI = n > 0 ? base * loanF / n : 0;
+  } else {
+    EMI = inp.emi;
+    base = loanF > 0 ? EMI * n / loanF : 0;
+    if(inp.morat > 0){
+      if(inp.moratTreat === 'capitalize'){ P = base/grow; moratInterest = base - P; }
+      else { P = base; moratInterest = P*(grow-1); }
+    } else P = base;
+  }
+
+  const repayInterest = base * (loanF - 1);            // interest over the repayment period
+  const paidDuringMorat = (inp.morat > 0 && inp.moratTreat === 'payNow') ? moratInterest : 0;
+  const totalPaid = EMI*n + paidDuringMorat;
+  const totalInterest = totalPaid - P;
+  return {P, EMI, base, n, loanF, repayInterest, grow, moratInterest,
+          paidDuringMorat, totalPaid, totalInterest, method};
+}
+
+/* Reducing balance — the bank EMI. Interest each month is charged only on
+   the balance still owed (monthly rests), and the EMI is the level payment
+   that clears the loan in n months:  EMI = B·r·(1+r)^n / ((1+r)^n − 1).
+   Moratorium: interest either compounds monthly onto the loan, or is paid
+   off each month as it falls due (so it never compounds). */
+function annuityPV(EMI, rate, n){
+  const r = rate/1200;
+  if(n <= 0) return 0;
+  if(r === 0) return EMI*n;
+  return EMI * (1 - Math.pow(1+r, -n)) / r;
+}
+function priceReducing(inp){
+  const n = inp.months - inp.morat, r = inp.rate/1200;
+  const capGrow = inp.morat > 0 ? Math.pow(1+r, inp.morat) : 1;
+  let P, EMI, base, moratInterest = 0;
+  if(inp.solveMode === 'emi'){
+    P = inp.amount;
+    base = (inp.morat > 0 && inp.moratTreat === 'capitalize') ? P*capGrow : P;
+    EMI = n > 0 ? bankEMI(base, inp.rate, n) : 0;
+  } else {
+    EMI = inp.emi;
+    base = annuityPV(EMI, inp.rate, n);
+    P = (inp.morat > 0 && inp.moratTreat === 'capitalize') ? base/capGrow : base;
+  }
+  if(inp.morat > 0) moratInterest = inp.moratTreat === 'capitalize' ? base - P : P*r*inp.morat;
+  const paidDuringMorat = (inp.morat > 0 && inp.moratTreat === 'payNow') ? moratInterest : 0;
+  const repayInterest = EMI*n - base;
+  const totalPaid = EMI*n + paidDuringMorat;
+  return {P, EMI, base, n, r, loanF: base > 0 ? EMI*n/base : 1, repayInterest, grow: capGrow,
+          moratInterest, paidDuringMorat, totalPaid, totalInterest: totalPaid - P, method: 'reducing'};
+}
+
+/* month rows: principal and interest are both recovered in equal parts,
+   since interest was fixed upfront on the full amount */
+function scheduleRows(inp, w){
+  const rows = [];
+  if(w.n <= 0) return rows;
+  if(w.method === 'reducing'){
+    let bal = w.base;
+    for(let m = 1; m <= w.n && m <= 1200; m++){
+      const opening = bal, interest = opening * w.r;
+      let principal = w.EMI - interest;
+      if(m === w.n) principal = opening;                // last EMI clears any rounding
+      bal = Math.max(0, opening - principal);
+      rows.push({m: inp.morat + m, opening, emi: principal + interest, interest, principal, closing: bal});
+    }
+    return rows;
+  }
+  const pPart = w.base / w.n;
+  const iPart = w.repayInterest / w.n;
+  let bal = w.base;
+  for(let m = 1; m <= w.n && m <= 1200; m++){
+    const opening = bal;
+    bal = m === w.n ? 0 : Math.max(0, opening - pPart);
+    rows.push({
+      m: inp.morat + m,
+      opening: opening,
+      emi: pPart + iPart,
+      interest: iPart,
+      principal: m === w.n ? opening : pPart,
+      closing: bal
+    });
+  }
+  return rows;
+}
+
+let lastSchedule = [], lastLoanWork = null;
+const compLabel = f => ({1:'yearly',2:'half-yearly',4:'quarterly',12:'monthly'}[f] || f + 'x a year');
+
+function computeLoan(){
+  const inp = loanInputs();
+  $('field-morat-treatment').style.display = inp.morat > 0 ? '' : 'none';
+  $('field-comp-freq').style.display = inp.method === 'compound' ? '' : 'none';
+
+  if(inp.months - inp.morat <= 0){
+    const msg = inp.months <= 0 ? 'Enter a tenure to see the EMI.'
+                                : 'The tenure has to be longer than the moratorium.';
+    $('loanLedger').innerHTML = '<div class="ledger-head"><div class="eyebrow">' +
+      (inp.solveMode === 'emi' ? 'Monthly EMI' : 'Loan you can take') +
+      '</div><div class="big">—</div><div class="said">' + msg + '</div></div>';
+    $('loanVs').innerHTML = ''; $('loanVs').style.display = 'none'; $('loanNote').style.display = 'none';
+    lastSchedule = []; if($('amortWrap').classList.contains('open')) renderAmort();
+    updateAnswerBar();
+    return;
+  }
+  $('loanVs').style.display = '';
+  const all = {
+    reducing: priceLoan(inp, 'reducing'),
+    compound: priceLoan(inp, 'compound'),
+    simple:   priceLoan(inp, 'simple')
+  };
+  const chosen = all[inp.method];
+  lastLoanWork = chosen;
+
+  /* ---- main ledger ---- */
+  const head = inp.solveMode === 'emi'
+    ? {k:'Monthly EMI', v: fmt(chosen.EMI), said: rupeesInWords(Math.round(chosen.EMI)) + ' per month'}
+    : {k:'Loan you can take', v: fmt(chosen.P), said: rupeesInWords(Math.round(chosen.P))};
+
+  let h = '<div class="ledger-head"><div class="eyebrow">' + head.k + '</div>' +
+          '<div class="big">' + head.v + '</div>' +
+          '<div class="said">' + head.said + '</div></div><div class="ledger-body">';
+
+  h += line(inp.solveMode === 'emi' ? 'Loan amount' : 'EMI',
+            inp.solveMode === 'emi' ? fmt(chosen.P) : fmt(chosen.EMI));
+  h += line('Method', inp.method === 'reducing' ? 'Bank EMI, compounded monthly'
+            : inp.method === 'compound' ? 'Compound on full amount, ' + compLabel(inp.freq)
+            : 'Simple on full amount');
+  h += line('Charged on', inp.method === 'reducing' ? 'Balance still owed' : 'Full loan amount');
+  h += line('Rate', pct(inp.rate) + ' per year');
+  h += line('Tenure', inp.months + ' months (' + (inp.months/12).toFixed(2) + ' yrs)');
+
+  if(inp.morat > 0){
+    h += '<div class="ledger-sub">Moratorium</div>';
+    h += line('Length', inp.morat + ' months');
+    h += line('Interest accrued', fmt(chosen.moratInterest), 'cost');
+    h += line(inp.moratTreat === 'capitalize' ? 'Principal after capitalising' : 'Paid upfront during holiday',
+              fmt(inp.moratTreat === 'capitalize' ? chosen.base : chosen.paidDuringMorat));
+    h += line('First EMI due in month', String(inp.morat + 1));
+  }
+
+  if(inp.method === 'reducing'){
+    const i1 = chosen.base * chosen.r;
+    const rowsTmp = scheduleRows(inp, chosen), last = rowsTmp[rowsTmp.length-1];
+    h += '<div class="ledger-sub">First EMI is made of</div>';
+    h += line('Principal', fmt(chosen.EMI - i1), 'growth');
+    h += line('Interest', fmt(i1), 'cost');
+    h += '<div class="ledger-sub">Last EMI is made of</div>';
+    h += line('Principal ', fmt(last ? last.principal : 0), 'growth');
+    h += line('Interest ', fmt(last ? last.interest : 0), 'cost');
+  } else {
+    h += '<div class="ledger-sub">Each EMI is made of</div>';
+    h += line('Principal', fmt(chosen.n > 0 ? chosen.base/chosen.n : 0), 'growth');
+    h += line('Interest', fmt(chosen.n > 0 ? chosen.repayInterest/chosen.n : 0), 'cost');
+  }
+
+  h += '<div class="ledger-sub">Totals</div>';
+  h += line('Total interest', fmt(chosen.totalInterest), 'cost');
+  h += line('Total repayment', fmt(chosen.totalPaid), '');
+  h += line('Interest as % of loan', pct(chosen.P > 0 ? chosen.totalInterest/chosen.P*100 : 0), 'cost');
+  h += barHTML(chosen.totalPaid > 0 ? chosen.P/chosen.totalPaid*100 : 0, 'Principal', 'Interest');
+  h += '</div>';
+  $('loanLedger').innerHTML = h;
+
+  renderVs(inp, all);
+
+  lastSchedule = scheduleRows(inp, chosen);
+  if($('amortWrap').classList.contains('open')) renderAmort();
+
+  /* ---- bank comparison note ---- */
+  const note = $('loanNote');
+  const eq = equivalentBankRate(chosen.base, chosen.EMI, chosen.n);
+  if(inp.method !== 'reducing' && chosen.n > 0 && chosen.EMI > 0 && inp.rate > 0){
+    note.style.display = '';
+    note.innerHTML = '<b>This is not a normal bank EMI.</b> Interest here is charged on the full loan for ' +
+      'the whole tenure, even as you repay it. A standard loan on the same terms (<b>Bank EMI</b>) is <b>' +
+      fmt(all.reducing.EMI) + '</b> a month. This EMI equals a bank loan at about <b>' + pct(eq) + '</b>.';
+  } else {
+    note.style.display = 'none';
+  }
+  updateAnswerBar();
+}
+
+function renderVs(inp, all){
+  const picked = inp.method;
+  const names = {reducing:'Bank EMI', compound:'Compound on full amount', simple:'Simple on full amount'};
+  const subs  = {reducing:'standard, compounded monthly on balance owed',
+                 compound:'compounded ' + compLabel(inp.freq) + ', never reduces',
+                 simple:'not compounded, never reduces'};
+  let body = '<div class="vs-head">All three methods, same inputs' +
+    '<span>' + pct(inp.rate) + ' for ' + inp.months + ' months' +
+    (inp.solveMode === 'emi' ? ' · monthly EMI' : ' · loan you can take') + '</span></div><div class="vs-list">';
+  ['reducing','compound','simple'].forEach(k => {
+    const w = all[k];
+    body += '<div class="vs-row' + (k === picked ? ' picked' : '') + '" data-method="' + k + '">' +
+      '<div><div class="vr-name">' + names[k] + '</div><div class="vr-sub">' + subs[k] + '</div></div>' +
+      '<div class="vr-right"><div class="vr-amt">' + fmt(inp.solveMode === 'emi' ? w.EMI : w.P) + '</div>' +
+      '<div class="vr-sub">interest ' + compact(w.totalInterest) + '</div></div></div>';
+  });
+  body += '</div><div class="vs-foot">';
+  const me = all[picked];
+  const others = ['reducing','compound','simple'].filter(k => k !== picked);
+  if(inp.solveMode === 'emi'){
+    body += 'Against ' + names[picked] + ': ' + others.map(k => {
+      const d = all[k].EMI - me.EMI, di = all[k].totalInterest - me.totalInterest;
+      return names[k] + ' is <b class="' + (d > 0 ? 'delta-up' : 'delta-down') + '">' +
+        fmt(Math.abs(d)) + '</b> a month ' + (d > 0 ? 'more' : 'less') + ' (' + (di > 0 ? '+' : '−') +
+        compact(Math.abs(di)).replace('₹','₹') + ' interest)';
+    }).join('; ') + '.';
+  } else {
+    body += 'For the same EMI: ' + others.map(k => {
+      const d = all[k].P - me.P;
+      return names[k] + ' lets you borrow <b class="' + (d > 0 ? 'delta-down' : 'delta-up') + '">' +
+        fmt(Math.abs(d)) + '</b> ' + (d > 0 ? 'more' : 'less');
+    }).join('; ') + '.';
+  }
+  body += '</div>';
+  $('loanVs').innerHTML = body;
+  $('loanVs').querySelectorAll('.vs-row').forEach(r => r.onclick = () => {
+    const b = document.querySelector('#seg-interest button[data-val="' + r.dataset.method + '"]');
+    if(b && !b.classList.contains('active')) b.click();
+  });
+}
+
+/* ---------- amortisation rendering ---------- */
+function renderAmort(){
+  const out = $('amortOut');
+  if(!lastSchedule.length){ out.innerHTML = '<p class="hint">Nothing to schedule — check the tenure.</p>'; return; }
+  const totalPrincipal = lastSchedule.reduce((s,r) => s + r.principal, 0);
+
+  if(amortViewSeg.get() === 'month'){
+    out.innerHTML = '<div class="yearblock"><div class="mhead"><span>#</span><span>Interest</span><span>Principal</span><span>Balance</span></div>' +
+      '<div class="monthlist open">' + lastSchedule.map(r =>
+        '<div class="mrow"><span class="m">' + r.m + '</span>' +
+        '<span class="i">' + Math.round(r.interest).toLocaleString('en-IN') + '</span>' +
+        '<span class="p">' + Math.round(r.principal).toLocaleString('en-IN') + '</span>' +
+        '<span class="b">' + Math.round(r.closing).toLocaleString('en-IN') + '</span></div>'
+      ).join('') + '</div></div>';
+    return;
+  }
+
+  let html = '', paid = 0, idx = 0, yr = 0;
+  while(idx < lastSchedule.length){
+    yr++;
+    const chunk = lastSchedule.slice(idx, idx + 12);
+    idx += 12;
+    const yInt = chunk.reduce((s,r) => s + r.interest, 0);
+    const yPri = chunk.reduce((s,r) => s + r.principal, 0);
+    paid += yPri;
+    const doneP = totalPrincipal > 0 ? paid/totalPrincipal*100 : 0;
+    const closing = chunk[chunk.length-1].closing;
+
+    html += '<div class="yearblock">' +
+      '<button class="yearbar" data-year="' + yr + '">' +
+        '<span class="yr">Year ' + yr + '</span>' +
+        '<span class="prog"><i style="width:' + doneP.toFixed(1) + '%"></i></span>' +
+        '<span class="pc">' + doneP.toFixed(0) + '%</span>' +
+      '</button>' +
+      '<div class="yearsum">' +
+        '<div><span>Principal</span><b>' + compact(yPri) + '</b></div>' +
+        '<div><span>Interest</span><b>' + compact(yInt) + '</b></div>' +
+        '<div><span>Balance</span><b>' + compact(closing) + '</b></div>' +
+      '</div>' +
+      '<div class="monthlist" id="ml-' + yr + '">' +
+        '<div class="mhead"><span>#</span><span>Interest</span><span>Principal</span><span>Balance</span></div>' +
+        chunk.map(r =>
+          '<div class="mrow"><span class="m">' + r.m + '</span>' +
+          '<span class="i">' + Math.round(r.interest).toLocaleString('en-IN') + '</span>' +
+          '<span class="p">' + Math.round(r.principal).toLocaleString('en-IN') + '</span>' +
+          '<span class="b">' + Math.round(r.closing).toLocaleString('en-IN') + '</span></div>'
+        ).join('') +
+      '</div></div>';
+  }
+  out.innerHTML = html;
+  out.querySelectorAll('.yearbar').forEach(b => {
+    b.onclick = () => $('ml-' + b.dataset.year).classList.toggle('open');
+  });
+}
+
+disclose('amortToggle', 'amortWrap', renderAmort);
+
+$('amortCsv').onclick = () => {
+  if(!lastSchedule.length) return toast('Nothing to export');
+  const rows = [['Month','Opening','Payment','Interest','Principal','Closing']];
+  lastSchedule.forEach(r => rows.push([r.m, r.opening.toFixed(2), r.emi.toFixed(2),
+    r.interest.toFixed(2), r.principal.toFixed(2), r.closing.toFixed(2)]));
+  downloadCSV('amortisation-schedule.csv', rows);
+  toast('CSV downloaded');
+};
+
+bindWords('loanAmount','loanAmountWords');
+bindWords('loanEmiInput','loanEmiWords');
+wire(['loanAmount','loanEmiInput','loanRate','loanCompFreq','loanTenure','loanTenureUnit','moratMonths','moratTreatment'], computeLoan);
+
+/* ============================================================
+   SIP
+   ============================================================ */
+const sipSolveSeg = seg('seg-sip-solve', v => {
+  $('field-sip-amount').style.display = v === 'fv'  ? '' : 'none';
+  $('field-sip-target').style.display = v === 'sip' ? '' : 'none';
+  computeSIP();
+});
+
+/* future value of 1 rupee invested monthly at start of month, with annual step-up */
+function sipFactor(i, n, stepUp){
+  if(n <= 0) return 0;
+  let f = 0, mult = 1;
+  for(let m = 0; m < n; m++){
+    if(m > 0 && m % 12 === 0) mult *= (1 + stepUp);
+    f += mult * Math.pow(1+i, n-m);
+  }
+  return f;
+}
+function sipInvestedFactor(n, stepUp){
+  let t = 0, mult = 1;
+  for(let m = 0; m < n; m++){
+    if(m > 0 && m % 12 === 0) mult *= (1 + stepUp);
+    t += mult;
+  }
+  return t;
+}
+
+function computeSIP(){
+  const mode = sipSolveSeg.get();
+  const rate = num('sipRate'), years = capYears(num('sipYears')), step = num('sipStepUp')/100;
+  const n = Math.round(years*12), i = rate/1200;
+  const f = sipFactor(i, n, step);
+  const invF = sipInvestedFactor(n, step);
+
+  let sip, FV;
+  if(mode === 'fv'){ sip = num('sipAmount'); FV = sip*f; }
+  else { FV = num('sipTarget'); sip = f > 0 ? FV/f : 0; }
+
+  const invested = sip*invF;
+  const gain = FV - invested;
+  const lastSip = sip * Math.pow(1+step, Math.max(0, Math.ceil(n/12)-1));
+
+  let h = '<div class="ledger-head"><div class="eyebrow">' +
+    (mode === 'fv' ? 'Future value' : 'Monthly SIP needed') + '</div>' +
+    '<div class="big">' + fmt(mode === 'fv' ? FV : sip) + '</div>' +
+    '<div class="said">' + rupeesInWords(Math.round(mode === 'fv' ? FV : sip)) + '</div>' +
+    '</div><div class="ledger-body">';
+
+  h += line(mode === 'fv' ? 'Monthly SIP' : 'Target amount', fmt(mode === 'fv' ? sip : FV));
+  h += line('Duration', n + ' months (' + years + ' yrs)');
+  h += line('Expected return', pct(rate) + ' per year');
+  if(step > 0) h += line('Final year SIP', fmt(lastSip));
+  h += line('Total invested', fmt(invested));
+  h += line('Wealth gained', fmt(gain), 'growth');
+  h += line('Growth multiple', invested > 0 ? (FV/invested).toFixed(2) + 'x' : '—', 'growth');
+  h += barHTML(FV > 0 ? invested/FV*100 : 0, 'Invested', 'Returns');
+  h += '</div>';
+  $('sipLedger').innerHTML = h;
+  updateAnswerBar();
+}
+bindWords('sipAmount','sipAmountWords');
+bindWords('sipTarget','sipTargetWords');
+wire(['sipAmount','sipTarget','sipRate','sipYears','sipStepUp'], computeSIP);
+
+/* ============================================================
+   LUMP SUM
+   ============================================================ */
+const lumpSolveSeg = seg('seg-lump-solve', v => {
+  $('field-lump-pv').style.display = v === 'fv' ? '' : 'none';
+  $('field-lump-fv').style.display = v === 'pv' ? '' : 'none';
+  computeLump();
+});
+const freqLabel = f => ({1:'yearly',2:'half-yearly',4:'quarterly',12:'monthly',365:'daily'}[f] || (f + 'x a year'));
+
+function computeLump(){
+  const mode = lumpSolveSeg.get();
+  const rate = num('lumpRate'), years = capYears(num('lumpYears'));
+  const f = parseInt($('lumpFreq').value, 10);
+  const i = rate/100/f, n = years*f;
+  const growth = Math.pow(1+i, n);
+  const effective = (Math.pow(1 + rate/100/f, f) - 1) * 100;
+
+  let pv, fv;
+  if(mode === 'fv'){ pv = num('lumpPV'); fv = pv*growth; }
+  else { fv = num('lumpFV'); pv = growth > 0 ? fv/growth : 0; }
+  const gain = fv - pv;
+
+  let h = '<div class="ledger-head"><div class="eyebrow">' +
+    (mode === 'fv' ? 'Future value' : 'Invest today') + '</div>' +
+    '<div class="big">' + fmt(mode === 'fv' ? fv : pv) + '</div>' +
+    '<div class="said">' + rupeesInWords(Math.round(mode === 'fv' ? fv : pv)) + '</div>' +
+    '</div><div class="ledger-body">';
+  h += line(mode === 'fv' ? 'Invested today' : 'Target amount', fmt(mode === 'fv' ? pv : fv));
+  h += line('Rate', pct(rate) + ', compounded ' + freqLabel(f));
+  h += line('Effective annual rate', pct(effective));
+  h += line('Duration', years + ' years');
+  h += line('Total gain', fmt(gain), 'growth');
+  h += line('Growth multiple', pv > 0 ? (fv/pv).toFixed(2) + 'x' : '—', 'growth');
+  h += barHTML(fv > 0 ? pv/fv*100 : 0, 'Principal', 'Returns');
+  h += '</div>';
+  $('lumpLedger').innerHTML = h;
+  updateAnswerBar();
+}
+bindWords('lumpPV','lumpPVWords');
+bindWords('lumpFV','lumpFVWords');
+wire(['lumpPV','lumpFV','lumpRate','lumpYears','lumpFreq'], computeLump);
+
+/* ============================================================
+   FIXED DEPOSIT
+   ============================================================ */
+const fdTypeSeg = seg('seg-fd-type', v => {
+  $('field-fd-payout').style.display = v === 'payout' ? '' : 'none';
+  computeFD();
+});
+
+function tenureFrom(yId, mId, dId){
+  let y = num(yId), m = num(mId), d = num(dId);
+  // cap the whole tenure at MAX_YEARS, trimming days, then months, then years
+  const over = () => y + m/12 + d/365 - MAX_YEARS;
+  if(over() > 0){ d = Math.max(0, d - over()*365); }
+  if(over() > 0){ m = Math.max(0, m - over()*12); }
+  if(over() > 0){ y = Math.max(0, y - over()); }
+  y = Math.floor(y*1e6)/1e6; m = Math.floor(m*1e6)/1e6; d = Math.round(d*1e4)/1e4;
+  return {
+    y, m, d,
+    years: y + m/12 + d/365,
+    months: Math.floor(y*12 + m),
+    label: [y ? y + ' yr' : '', m ? m + ' mo' : '', d ? d + ' d' : ''].filter(Boolean).join(' ') || '0'
+  };
+}
+
+/* Payout FD. Interest runs at the deposit's compounding frequency; each payout is
+   what that earns over one payout period:
+     paid more often than it compounds (monthly on quarterly) -> discounted
+     paid as often as it compounds                          -> plain P × r / f
+     paid less often (half-yearly on quarterly)             -> compounded within
+   Any leftover time after the last full payout is paid at simple rate at maturity. */
+function fdPayout(P, rate, years, freq, payFreq){
+  const per = P * (Math.pow(1 + rate/100/freq, freq/payFreq) - 1);
+  const count = Math.floor(years*payFreq + 1e-9);
+  const rest = Math.max(0, years - count/payFreq);
+  const tail = P * (rate/100) * rest;
+  return {per, count, tail, total: per*count + tail};
+}
+
+/* compound for whole periods, simple interest on the broken period — the bank convention */
+function fdMaturity(P, rate, years, freq){
+  const i = rate/100/freq;
+  const periods = years*freq;
+  const whole = Math.floor(periods + 1e-9);
+  const frac = periods - whole;
+  return P * Math.pow(1+i, whole) * (1 + i*frac);
+}
+
+function computeFD(){
+  const P = num('fdAmount');
+  const rate = num('fdRate') + num('fdSenior');
+  const t = tenureFrom('fdY','fdM','fdD');
+  const freq = parseInt($('fdFreq').value, 10);
+  const kind = fdTypeSeg.get();
+  const taxRate = Math.min(100, Math.max(0, num('fdTds')));
+
+  let maturity, interest, perPayout = 0, payouts = 0, payFreq = 1;
+
+  if(kind === 'cumulative'){
+    maturity = t.years > 0 ? fdMaturity(P, rate, t.years, freq) : P;
+    interest = maturity - P;
+  } else {
+    payFreq = parseInt($('fdPayoutFreq').value, 10);
+    const po = fdPayout(P, rate, t.years, freq, payFreq);
+    interest = po.total;
+    perPayout = po.per;
+    payouts = po.count;
+    var payoutTail = po.tail;
+    maturity = P;
+  }
+
+  const tax = interest * taxRate/100;
+  const netInterest = interest - tax;
+  const yieldPct = (P > 0 && t.years > 0) ? (Math.pow((P+interest)/P, 1/t.years) - 1) * 100 : 0;
+
+  const headAmt = kind === 'cumulative' ? maturity : perPayout;
+  const headKey = kind === 'cumulative' ? 'Maturity amount' : 'Interest per payout';
+
+  let h = '<div class="ledger-head"><div class="eyebrow">' + headKey + '</div>' +
+    '<div class="big">' + fmt(headAmt) + '</div>' +
+    '<div class="said">' + rupeesInWords(Math.round(headAmt)) + '</div>' +
+    '</div><div class="ledger-body">';
+
+  h += line('Deposit', fmt(P));
+  h += line('Rate applied', pct(rate) + (num('fdSenior') > 0 ? ' (incl. senior bonus)' : ''));
+  h += line('Tenure', t.label + ' · ' + t.years.toFixed(3) + ' yrs');
+  h += line('Days', Math.round(t.years*365).toLocaleString('en-IN'));
+
+  if(kind === 'cumulative'){
+    h += line('Compounding', freqLabel(freq));
+    h += line('Interest earned', fmt(interest), 'growth');
+    h += line('Effective yield', pct(yieldPct), 'growth');
+  } else {
+    h += line('Payout frequency', freqLabel(payFreq));
+    h += line('Worked out as', payFreq > freq ? 'Discounted from ' + freqLabel(freq)
+            : payFreq < freq ? 'Compounded ' + freqLabel(freq) + ' within' : 'Simple, per period');
+    h += line('Number of payouts', String(payouts));
+    if(payoutTail > 0.005) h += line('Leftover period, paid at maturity', fmt(payoutTail), 'growth');
+    h += line('Total interest', fmt(interest), 'growth');
+    h += line('Principal returned at maturity', fmt(P));
+  }
+
+  if(taxRate > 0){
+    h += '<div class="ledger-sub">After tax at ' + taxRate + '%</div>';
+    h += line('Tax on interest', fmt(tax), 'cost');
+    h += line('Interest in hand', fmt(netInterest), 'growth');
+    h += line(kind === 'cumulative' ? 'Net maturity' : 'Net total received', fmt(P + netInterest), '');
+  }
+
+  h += '<div class="ledger-sub">Totals</div>';
+  const totalEnd = P + interest - tax;
+  h += line(kind === 'cumulative' ? 'Total value at maturity' : 'Principal + all interest',
+            fmt(totalEnd));
+  h += barHTML(totalEnd > 0 ? P/totalEnd*100 : 100, 'Principal', 'Interest');
+  h += '</div>';
+  $('fdLedger').innerHTML = h;
+
+  if($('fdSchedWrap').classList.contains('open')) renderFDSched(P, rate, t, freq, kind);
+  updateAnswerBar();
+}
+
+function renderFDSched(P, rate, t, freq, kind){
+  const out = $('fdSchedOut');
+  if(t.years <= 0){ out.innerHTML = '<p class="hint">Set a tenure to see the growth.</p>'; return; }
+  let html = '<div class="yearblock"><div class="mhead"><span>Yr</span><span>Interest</span><span>Earned</span><span>Value</span></div><div class="monthlist open">';
+  const steps = Math.ceil(t.years);
+  let prev = P;
+  for(let k = 1; k <= steps && k <= 60; k++){
+    const at = Math.min(k, t.years);
+    const val = kind === 'cumulative' ? fdMaturity(P, rate, at, freq)
+      : P + fdPayout(P, rate, at, freq, parseInt($('fdPayoutFreq').value, 10)).total;
+    html += '<div class="mrow"><span class="m">' + k + '</span>' +
+      '<span class="p">' + Math.round(val - prev).toLocaleString('en-IN') + '</span>' +
+      '<span class="p">' + Math.round(val - P).toLocaleString('en-IN') + '</span>' +
+      '<span class="b">' + Math.round(val).toLocaleString('en-IN') + '</span></div>';
+    prev = val;
+  }
+  html += '</div></div>';
+  out.innerHTML = html;
+}
+
+disclose('fdSchedToggle','fdSchedWrap', () => {
+  computeFD();
+  renderFDSched(num('fdAmount'), num('fdRate') + num('fdSenior'),
+    tenureFrom('fdY','fdM','fdD'), parseInt($('fdFreq').value,10), fdTypeSeg.get());
+});
+bindWords('fdAmount','fdAmountWords');
+wire(['fdAmount','fdRate','fdY','fdM','fdD','fdFreq','fdPayoutFreq','fdSenior','fdTds'], computeFD);
+
+/* ============================================================
+   RECURRING DEPOSIT
+   ============================================================ */
+function rdWorking(R, rate, months, days, freq){
+  const i = rate/100/freq;
+  let maturity = 0;
+  const rows = [];
+  const q = Math.pow(1+i, freq/12);                   // growth over one month
+  for(let k = 1; k <= months; k++){
+    const held = (months - k + 1)/12;
+    maturity += R * Math.pow(1+i, freq*held);
+  }
+  /* account value at the end of each month: v(m) = (v(m-1) + R) × q */
+  let v = 0;
+  for(let m = 1; m <= months && m <= 1200; m++){
+    v = (v + R) * q;
+    rows.push({m, deposited: R*m, value: v});
+  }
+  let brokenInterest = 0;
+  if(days > 0){
+    brokenInterest = maturity * (rate/100) * (days/365);
+    maturity += brokenInterest;
+  }
+  return {maturity, rows, brokenInterest, deposited: R*months};
+}
+
+let rdCache = null;
+
+function computeRD(){
+  const R = num('rdAmount');
+  const rate = num('rdRate');
+  const t = tenureFrom('rdY','rdM','rdD');
+  const freq = parseInt($('rdFreq').value, 10);
+  const taxRate = Math.min(100, Math.max(0, num('rdTds')));
+
+  const w = rdWorking(R, rate, t.months, t.d, freq);
+  rdCache = w;
+  const interest = w.maturity - w.deposited;
+  const tax = interest * taxRate/100;
+  const effRate = (Math.pow(1 + rate/100/freq, freq) - 1) * 100;
+
+  let h = '<div class="ledger-head"><div class="eyebrow">Maturity amount</div>' +
+    '<div class="big">' + fmt(w.maturity) + '</div>' +
+    '<div class="said">' + rupeesInWords(Math.round(w.maturity)) + '</div>' +
+    '</div><div class="ledger-body">';
+
+  h += line('Monthly instalment', fmt(R));
+  h += line('Number of instalments', String(t.months));
+  h += line('Rate', pct(rate) + ', compounded ' + freqLabel(freq));
+  h += line('Tenure', t.label);
+  h += line('Total deposited', fmt(w.deposited));
+  h += line('Interest earned', fmt(interest), 'growth');
+  if(w.brokenInterest > 0) h += line('Of which broken period (' + t.d + ' d)', fmt(w.brokenInterest), 'growth');
+  h += line('Effective annual rate', pct(effRate), 'growth');
+  h += line('Return on total deposited', pct(w.deposited > 0 ? (w.maturity - w.deposited)/w.deposited*100 : 0), 'growth');
+
+  if(taxRate > 0){
+    h += '<div class="ledger-sub">After tax at ' + taxRate + '%</div>';
+    h += line('Tax on interest', fmt(tax), 'cost');
+    h += line('Net maturity', fmt(w.maturity - tax));
+  }
+
+  h += barHTML(w.maturity > 0 ? w.deposited/w.maturity*100 : 100, 'Deposited', 'Interest');
+  h += '</div>';
+  $('rdLedger').innerHTML = h;
+  if($('rdSchedWrap').classList.contains('open')) renderRDSched();
+  updateAnswerBar();
+}
+
+function renderRDSched(){
+  const out = $('rdSchedOut');
+  if(!rdCache || !rdCache.rows.length){ out.innerHTML = '<p class="hint">Set a tenure in months to see the build-up.</p>'; return; }
+  let html = '<div class="yearblock"><div class="mhead"><span>Mo</span><span>Deposited</span><span>Interest</span><span>Balance</span></div><div class="monthlist open">';
+  rdCache.rows.forEach(r => {
+    html += '<div class="mrow"><span class="m">' + r.m + '</span>' +
+      '<span class="b">' + Math.round(r.deposited).toLocaleString('en-IN') + '</span>' +
+      '<span class="p">' + Math.round(r.value - r.deposited).toLocaleString('en-IN') + '</span>' +
+      '<span class="b">' + Math.round(r.value).toLocaleString('en-IN') + '</span></div>';
+  });
+  html += '</div></div>';
+  out.innerHTML = html;
+}
+disclose('rdSchedToggle','rdSchedWrap', renderRDSched);
+bindWords('rdAmount','rdAmountWords');
+wire(['rdAmount','rdRate','rdY','rdM','rdD','rdFreq','rdTds'], computeRD);
+
+/* ============================================================
+   VALUE OVER TIME  (inflation)
+   ============================================================ */
+const valModeSeg = seg('seg-val-mode', () => computeValue());
+
+function computeValue(){
+  const mode = valModeSeg.get();
+  const A = num('valAmount');
+  const ret = num('valReturn')/100;
+  const inf = num('valInflation')/100;
+  const t = capYears(num('valYears'));
+  const realRate = (1+ret)/(1+inf) - 1;
+
+  $('valAmountLabel').textContent =
+    mode === 'grow' ? 'Amount today (₹)' :
+    mode === 'cost' ? "What it costs today (₹)" : 'Amount in the future (₹)';
+  $('field-val-return').style.display = mode === 'back' ? 'none' : '';
+  $('valTag').textContent = mode === 'grow' ? 'Growth' : mode === 'cost' ? 'Future cost' : 'Discounting';
+
+  const infFactor = Math.pow(1+inf, t);
+  const retFactor = Math.pow(1+ret, t);
+  let h = '';
+
+  if(mode === 'grow'){
+    const nominal = A * retFactor;
+    const real = nominal / infFactor;
+    h = '<div class="ledger-head"><div class="eyebrow">Value in ' + t + ' years</div>' +
+      '<div class="big">' + fmt(nominal) + '</div>' +
+      '<div class="said">Buys what ' + fmt(real) + ' buys today</div></div><div class="ledger-body">';
+    h += line('Amount today', fmt(A));
+    h += line('Return', pct(ret*100) + ' per year');
+    h += line('Inflation', pct(inf*100) + ' per year');
+    h += '<div class="ledger-sub">In tomorrow\u2019s rupees</div>';
+    h += line('Nominal value', fmt(nominal), 'growth');
+    h += line('Nominal gain', fmt(nominal - A), 'growth');
+    h += '<div class="ledger-sub">In today\u2019s rupees</div>';
+    h += line('Real value', fmt(real), real >= A ? 'growth' : 'cost');
+    h += line('Real gain', fmt(real - A), real >= A ? 'growth' : 'cost');
+    h += line('Lost to inflation', fmt(nominal - real), 'cost');
+    h += line('Real rate of return', pct(realRate*100), realRate >= 0 ? 'growth' : 'cost');
+    h += barHTML(nominal > 0 ? real/nominal*100 : 0, 'Real value kept', 'Eaten by inflation');
+    if(realRate < 0){
+      h += '<div class="note" style="margin-top:16px;"><b>You are going backwards.</b> ' +
+        'At ' + pct(ret*100) + ' against ' + pct(inf*100) + ' inflation, this money loses ' +
+        pct(Math.abs(realRate)*100) + ' of its buying power every year.</div>';
+    }
+    h += '</div>';
+
+  } else if(mode === 'cost'){
+    const future = A * infFactor;
+    const lump = retFactor > 0 ? future/retFactor : 0;
+    const n = Math.round(t*12);
+    const f = sipFactor(ret/12, n, 0);
+    const sipNeeded = f > 0 ? future/f : 0;
+    h = '<div class="ledger-head"><div class="eyebrow">Cost in ' + t + ' years</div>' +
+      '<div class="big">' + fmt(future) + '</div>' +
+      '<div class="said">' + rupeesInWords(Math.round(future)) + '</div></div><div class="ledger-body">';
+    h += line('Costs today', fmt(A));
+    h += line('Inflation', pct(inf*100) + ' per year');
+    h += line('Extra you will need', fmt(future - A), 'cost');
+    h += line('Price multiple', A > 0 ? (future/A).toFixed(2) + 'x' : '—', 'cost');
+    h += '<div class="ledger-sub">How to be ready for it</div>';
+    h += line('Invest today (lump sum)', fmt(lump), 'growth');
+    h += line('Or save monthly', fmt(sipNeeded), 'growth');
+    h += line('Assuming you earn', pct(ret*100) + ' per year');
+    h += barHTML(future > 0 ? A/future*100 : 0, "Today's price", 'Added by inflation');
+    h += '</div>';
+
+  } else {
+    const worth = infFactor > 0 ? A/infFactor : 0;
+    h = '<div class="ledger-head"><div class="eyebrow">Worth in today\u2019s money</div>' +
+      '<div class="big">' + fmt(worth) + '</div>' +
+      '<div class="said">' + rupeesInWords(Math.round(worth)) + '</div></div><div class="ledger-body">';
+    h += line('Amount ' + t + ' years from now', fmt(A));
+    h += line('Inflation', pct(inf*100) + ' per year');
+    h += line('Buying power lost', fmt(A - worth), 'cost');
+    h += line('Each ₹100 then is worth', fmt2(infFactor > 0 ? 100/infFactor : 0) + ' now', 'cost');
+    h += barHTML(A > 0 ? worth/A*100 : 0, 'Real worth', 'Lost to inflation');
+    h += '</div>';
+  }
+
+  $('valLedger').innerHTML = h;
+  if($('valTblWrap').classList.contains('open')) renderValTable();
+  updateAnswerBar();
+}
+
+function renderValTable(){
+  const mode = valModeSeg.get();
+  const A = num('valAmount'), ret = num('valReturn')/100, inf = num('valInflation')/100;
+  const T = capYears(num('valYears'));
+  const t = Math.ceil(T - 1e-9);
+  const out = $('valTblOut');
+  if(t <= 0){ out.innerHTML = '<p class="hint">Set the number of years first.</p>'; return; }
+
+  const heads = mode === 'grow' ? ['Yr','Nominal','Real','Lost']
+              : mode === 'cost' ? ['Yr','Cost','Increase','vs now']
+              : ['Yr','Amount','Worth now','Lost'];
+  let html = '<div class="yearblock"><div class="mhead"><span>' + heads.join('</span><span>') +
+             '</span></div><div class="monthlist open">';
+
+  for(let step = 1; step <= t; step++){
+    const k = Math.min(step, T);
+    const iF = Math.pow(1+inf, k), rF = Math.pow(1+ret, k);
+    let c1, c2, c3;
+    if(mode === 'grow'){
+      const nom = A*rF, real = nom/iF;
+      c1 = Math.round(nom); c2 = Math.round(real); c3 = Math.round(nom - real);
+    } else if(mode === 'cost'){
+      const cost = A*iF;
+      c1 = Math.round(cost); c2 = Math.round(cost - A); c3 = (cost/A).toFixed(2) + 'x';
+    } else {
+      const worth = A/iF;
+      c1 = Math.round(A); c2 = Math.round(worth); c3 = Math.round(A - worth);
+    }
+    html += '<div class="mrow"><span class="m">' + k + '</span>' +
+      '<span class="b">' + (typeof c1 === 'number' ? c1.toLocaleString('en-IN') : c1) + '</span>' +
+      '<span class="p">' + (typeof c2 === 'number' ? c2.toLocaleString('en-IN') : c2) + '</span>' +
+      '<span class="i">' + (typeof c3 === 'number' ? c3.toLocaleString('en-IN') : c3) + '</span></div>';
+  }
+  html += '</div></div>';
+  out.innerHTML = html;
+}
+disclose('valTblToggle','valTblWrap', renderValTable);
+bindWords('valAmount','valAmountWords');
+wire(['valAmount','valReturn','valInflation','valYears'], computeValue);
+
+/* ============================================================
+   UNIT CONVERSION
+   Each unit is {n: name, s: symbol, f: factor to base}
+   or {n, s, to: fn->base, from: fn->unit} for non-linear scales.
+   ============================================================ */
+const UNITS = {
+  length: {
+    label: 'Length', base: 'metre',
+    note: 'Base unit: metre. Nautical mile is the international 1852 m definition.',
+    units: [
+      {n:'Nanometre', s:'nm', f:1e-9},
+      {n:'Micrometre', s:'µm', f:1e-6},
+      {n:'Millimetre', s:'mm', f:0.001},
+      {n:'Centimetre', s:'cm', f:0.01},
+      {n:'Metre', s:'m', f:1},
+      {n:'Kilometre', s:'km', f:1000},
+      {n:'Inch', s:'in', f:0.0254},
+      {n:'Foot', s:'ft', f:0.3048},
+      {n:'Yard / Gaj', s:'yd', f:0.9144},
+      {n:'Mile', s:'mi', f:1609.344},
+      {n:'Nautical mile', s:'nmi', f:1852},
+      {n:'Thou / mil', s:'mil', f:0.0000254},
+      {n:'Hand', s:'hh', f:0.1016},
+      {n:'Fathom', s:'ftm', f:1.8288},
+      {n:'Rod', s:'rd', f:5.0292},
+      {n:'Chain', s:'ch', f:20.1168},
+      {n:'Furlong', s:'fur', f:201.168},
+      {n:'League', s:'lea', f:4828.032},
+      {n:'Ångström', s:'Å', f:1e-10},
+      {n:'Astronomical unit', s:'AU', f:1.495978707e11},
+      {n:'Light year', s:'ly', f:9.4607304725808e15},
+      {n:'Parsec', s:'pc', f:3.0856775814913673e16}
+    ]
+  },
+  area: {
+    label: 'Area', base: 'square metre',
+    note: 'Indian land units differ by state — bigha, katha and ground are given at their commonest local values, so check locally before signing anything.',
+    units: [
+      {n:'Square millimetre', s:'mm²', f:1e-6},
+      {n:'Square centimetre', s:'cm²', f:1e-4},
+      {n:'Square metre', s:'m²', f:1},
+      {n:'Square kilometre', s:'km²', f:1e6},
+      {n:'Square inch', s:'in²', f:0.00064516},
+      {n:'Square foot', s:'ft²', f:0.09290304},
+      {n:'Square yard / Gaj', s:'yd²', f:0.83612736},
+      {n:'Are', s:'a', f:100},
+      {n:'Hectare', s:'ha', f:10000},
+      {n:'Acre', s:'ac', f:4046.8564224},
+      {n:'Square mile', s:'mi²', f:2589988.110336},
+      {n:'Cent', s:'cent', f:40.468564224000005},                 // 435.6 sq ft
+      {n:'Guntha', s:'guntha', f:101.17141056000001},             // 1,089 sq ft
+      {n:'Marla', s:'marla', f:25.292852640000003},              // 272.25 sq ft
+      {n:'Kanal', s:'kanal', f:505.8570528},              // 20 marla
+      {n:'Katha (Bihar/UP)', s:'katha', f:126.4642632}, // 1/20 bigha
+      {n:'Bigha (UP/Bihar)', s:'bigha', f:2529.285264},  // 27,225 sq ft = 5/8 acre
+      {n:'Ground (Tamil Nadu)', s:'ground', f:222.967296}  // 2,400 sq ft
+    ]
+  },
+  mass: {
+    label: 'Mass', base: 'kilogram',
+    note: 'Base unit: kilogram. Tola is the jewellery standard 11.6638 g.',
+    units: [
+      {n:'Microgram', s:'µg', f:1e-9},
+      {n:'Milligram', s:'mg', f:1e-6},
+      {n:'Gram', s:'g', f:0.001},
+      {n:'Kilogram', s:'kg', f:1},
+      {n:'Quintal', s:'q', f:100},
+      {n:'Tonne (metric)', s:'t', f:1000},
+      {n:'Carat', s:'ct', f:0.0002},
+      {n:'Tola', s:'tola', f:0.0116638038},
+      {n:'Grain', s:'gr', f:6.479891e-5},
+      {n:'Ounce', s:'oz', f:0.028349523125},
+      {n:'Troy ounce', s:'ozt', f:0.0311034768},
+      {n:'Pound', s:'lb', f:0.45359237},
+      {n:'Stone', s:'st', f:6.35029318},
+      {n:'Ton (US short)', s:'ton', f:907.18474},
+      {n:'Ton (UK long)', s:'LT', f:1016.0469088}
+    ]
+  },
+  volume: {
+    label: 'Volume', base: 'litre',
+    note: 'US and Imperial measures differ — an Imperial pint is about 20% larger than a US pint.',
+    units: [
+      {n:'Millilitre', s:'ml', f:0.001},
+      {n:'Centilitre', s:'cl', f:0.01},
+      {n:'Litre', s:'L', f:1},
+      {n:'Kilolitre', s:'kL', f:1000},
+      {n:'Cubic centimetre', s:'cm³', f:0.001},
+      {n:'Cubic metre', s:'m³', f:1000},
+      {n:'Cubic inch', s:'in³', f:0.016387064},
+      {n:'Cubic foot', s:'ft³', f:28.316846592},
+      {n:'Cubic yard', s:'yd³', f:764.554857984},
+      {n:'Teaspoon (US)', s:'tsp', f:0.00492892159375},
+      {n:'Tablespoon (US)', s:'tbsp', f:0.01478676478125},
+      {n:'Fluid ounce (US)', s:'fl oz', f:0.0295735295625},
+      {n:'Cup (US)', s:'cup', f:0.2365882365},
+      {n:'Pint (US)', s:'pt', f:0.473176473},
+      {n:'Quart (US)', s:'qt', f:0.946352946},
+      {n:'Gallon (US)', s:'gal', f:3.785411784},
+      {n:'Fluid ounce (Imp)', s:'fl oz', f:0.0284130625},
+      {n:'Pint (Imp)', s:'pt', f:0.56826125},
+      {n:'Gallon (Imp)', s:'gal', f:4.54609},
+      {n:'Barrel (oil)', s:'bbl', f:158.987294928}
+    ]
+  },
+  temperature: {
+    label: 'Temperature', base: 'celsius',
+    note: 'These are offset scales, not multiples — doubling °C does not double the heat.',
+    units: [
+      {n:'Celsius', s:'°C', to:v=>v, from:v=>v},
+      {n:'Fahrenheit', s:'°F', to:v=>(v-32)*5/9, from:v=>v*9/5+32},
+      {n:'Kelvin', s:'K', to:v=>v-273.15, from:v=>v+273.15},
+      {n:'Rankine', s:'°R', to:v=>(v-491.67)*5/9, from:v=>v*9/5+491.67},
+      {n:'Réaumur', s:'°Ré', to:v=>v*1.25, from:v=>v*0.8}
+    ]
+  },
+  speed: {
+    label: 'Speed', base: 'metre per second',
+    note: 'Mach is taken at sea level, 20°C (343 m/s) — it varies with altitude and temperature.',
+    units: [
+      {n:'Metre per second', s:'m/s', f:1},
+      {n:'Kilometre per hour', s:'km/h', f:1/3.6},
+      {n:'Mile per hour', s:'mph', f:0.44704},
+      {n:'Foot per second', s:'ft/s', f:0.3048},
+      {n:'Knot', s:'kn', f:0.5144444444},
+      {n:'Mach (sea level)', s:'M', f:343}
+    ]
+  },
+  time: {
+    label: 'Time', base: 'second',
+    note: 'A month here is the average 30.44 days and a year is 365.2425 days.',
+    units: [
+      {n:'Nanosecond', s:'ns', f:1e-9},
+      {n:'Microsecond', s:'µs', f:1e-6},
+      {n:'Millisecond', s:'ms', f:0.001},
+      {n:'Second', s:'s', f:1},
+      {n:'Minute', s:'min', f:60},
+      {n:'Hour', s:'h', f:3600},
+      {n:'Day', s:'d', f:86400},
+      {n:'Week', s:'wk', f:604800},
+      {n:'Fortnight', s:'fn', f:1209600},
+      {n:'Month (avg)', s:'mo', f:2629746},
+      {n:'Year', s:'yr', f:31556952},
+      {n:'Decade', s:'dec', f:315569520},
+      {n:'Century', s:'c', f:3155695200}
+    ]
+  },
+  data: {
+    label: 'Data', base: 'byte',
+    note: 'KB/MB/GB are powers of 1000. KiB/MiB/GiB are powers of 1024 — the ones your operating system actually counts in.',
+    units: [
+      {n:'Bit', s:'b', f:0.125},
+      {n:'Byte', s:'B', f:1},
+      {n:'Kilobyte', s:'KB', f:1e3},
+      {n:'Megabyte', s:'MB', f:1e6},
+      {n:'Gigabyte', s:'GB', f:1e9},
+      {n:'Terabyte', s:'TB', f:1e12},
+      {n:'Petabyte', s:'PB', f:1e15},
+      {n:'Kibibyte', s:'KiB', f:1024},
+      {n:'Mebibyte', s:'MiB', f:1048576},
+      {n:'Gibibyte', s:'GiB', f:1073741824},
+      {n:'Tebibyte', s:'TiB', f:1099511627776}
+    ]
+  },
+  pressure: {
+    label: 'Pressure', base: 'pascal',
+    note: 'Tyre gauges usually read psi or bar; weather reports use hPa (same as millibar).',
+    units: [
+      {n:'Pascal', s:'Pa', f:1},
+      {n:'Hectopascal / millibar', s:'hPa', f:100},
+      {n:'Kilopascal', s:'kPa', f:1000},
+      {n:'Megapascal', s:'MPa', f:1e6},
+      {n:'Bar', s:'bar', f:1e5},
+      {n:'Pound per square inch', s:'psi', f:6894.757293168},
+      {n:'Atmosphere', s:'atm', f:101325},
+      {n:'Torr', s:'Torr', f:133.3223684211},
+      {n:'Millimetre of mercury', s:'mmHg', f:133.322387415},
+      {n:'Inch of mercury', s:'inHg', f:3386.389},
+      {n:'Kg-force per cm²', s:'kgf/cm²', f:98066.5}
+    ]
+  },
+  energy: {
+    label: 'Energy', base: 'joule',
+    note: 'The food "Calorie" on a nutrition label is a kilocalorie.',
+    units: [
+      {n:'Joule', s:'J', f:1},
+      {n:'Kilojoule', s:'kJ', f:1000},
+      {n:'Calorie', s:'cal', f:4.184},
+      {n:'Kilocalorie (food Cal)', s:'kcal', f:4184},
+      {n:'Watt hour', s:'Wh', f:3600},
+      {n:'Kilowatt hour (unit)', s:'kWh', f:3.6e6},
+      {n:'British thermal unit', s:'BTU', f:1055.05585262},
+      {n:'Therm', s:'thm', f:105505585.262},
+      {n:'Foot-pound', s:'ft·lb', f:1.3558179483314004},
+      {n:'Electronvolt', s:'eV', f:1.602176634e-19}
+    ]
+  },
+  power: {
+    label: 'Power', base: 'watt',
+    note: 'Indian vehicle specs quote metric horsepower (PS); US specs quote mechanical hp.',
+    units: [
+      {n:'Watt', s:'W', f:1},
+      {n:'Kilowatt', s:'kW', f:1000},
+      {n:'Megawatt', s:'MW', f:1e6},
+      {n:'Gigawatt', s:'GW', f:1e9},
+      {n:'Horsepower (metric/PS)', s:'PS', f:735.49875},
+      {n:'Horsepower (mechanical)', s:'hp', f:745.6998715823},
+      {n:'BTU per hour', s:'BTU/h', f:0.29307107017},
+      {n:'Tonne of refrigeration', s:'TR', f:3516.8528421},
+      {n:'Kilocalorie per hour', s:'kcal/h', f:1.163}
+    ]
+  },
+  force: {
+    label: 'Force', base: 'newton',
+    units: [
+      {n:'Newton', s:'N', f:1},
+      {n:'Kilonewton', s:'kN', f:1000},
+      {n:'Dyne', s:'dyn', f:1e-5},
+      {n:'Kilogram-force', s:'kgf', f:9.80665},
+      {n:'Pound-force', s:'lbf', f:4.4482216152605},
+      {n:'Tonne-force', s:'tf', f:9806.65}
+    ]
+  },
+  angle: {
+    label: 'Angle', base: 'degree',
+    units: [
+      {n:'Degree', s:'°', f:1},
+      {n:'Radian', s:'rad', f:57.29577951308232},
+      {n:'Gradian', s:'grad', f:0.9},
+      {n:'Arcminute', s:'′', f:1/60},
+      {n:'Arcsecond', s:'″', f:1/3600},
+      {n:'Turn', s:'turn', f:360},
+      {n:'Mil (NATO)', s:'mil', f:0.05625}
+    ]
+  },
+  frequency: {
+    label: 'Frequency', base: 'hertz',
+    units: [
+      {n:'Hertz', s:'Hz', f:1},
+      {n:'Kilohertz', s:'kHz', f:1e3},
+      {n:'Megahertz', s:'MHz', f:1e6},
+      {n:'Gigahertz', s:'GHz', f:1e9},
+      {n:'Revolutions per minute', s:'rpm', f:1/60},
+      {n:'Beats per minute', s:'bpm', f:1/60}
+    ]
+  },
+  fuel: {
+    label: 'Mileage', base: 'kilometre per litre',
+    note: 'L/100km runs the other way — a lower number is better.',
+    units: [
+      {n:'Kilometre per litre', s:'km/L', to:v=>v, from:v=>v},
+      {n:'Mile per gallon (US)', s:'mpg', to:v=>v*0.4251437074976, from:v=>v/0.4251437074976},
+      {n:'Mile per gallon (Imp)', s:'mpg', to:v=>v*0.3540061899559, from:v=>v/0.3540061899559},
+      {n:'Litre per 100 km', s:'L/100km', to:v=>v>0?100/v:Infinity, from:v=>v>0?100/v:Infinity},
+      {n:'Kilometre per gallon (US)', s:'km/gal', to:v=>v/3.785411784, from:v=>v*3.785411784}
+    ]
+  }
+};
+
+function toBase(u, v){ return u.to ? u.to(v) : v*u.f; }
+function fromBase(u, v){ return u.from ? u.from(v) : v/u.f; }
+
+function fmtUnit(v){
+  if(!isFinite(v)) return '—';
+  const a = Math.abs(v);
+  if(a === 0) return '0';
+  if(a < 1e-9 || a >= 1e15) return v.toExponential(6);
+  const rounded = Number(v.toPrecision(12));
+  const decimals = a >= 1000 ? 4 : a >= 1 ? 6 : 10;
+  return rounded.toLocaleString('en-US', {maximumFractionDigits: decimals});
+}
+
+let convCat = 'length';
+
+function initConv(){
+  const chips = $('convCats');
+  chips.innerHTML = Object.keys(UNITS).map((k,i) =>
+    '<button' + (i === 0 ? ' class="active"' : '') + ' data-cat="' + k + '">' + UNITS[k].label + '</button>'
+  ).join('');
+  chips.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      chips.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      convCat = b.dataset.cat;
+      fillUnitSelects();
+      computeConv();
+      b.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+    };
+  });
+  fillUnitSelects();
+  computeConv();
+}
+
+function fillUnitSelects(){
+  const cat = UNITS[convCat];
+  const opts = cat.units.map((u,i) =>
+    '<option value="' + i + '">' + u.n + (u.s ? '  (' + u.s + ')' : '') + '</option>'
+  ).join('');
+  $('convFrom').innerHTML = opts;
+  $('convTo').innerHTML = opts;
+  const defaults = {
+    length:[4,6], area:[6,9], mass:[3,11], volume:[2,15], temperature:[0,1],
+    speed:[1,2], time:[5,3], data:[4,3], pressure:[5,4], energy:[5,6],
+    power:[1,4], force:[0,4], angle:[0,1], frequency:[1,2], fuel:[0,1]
+  };
+  const d = defaults[convCat] || [0,1];
+  $('convFrom').value = Math.min(d[0], cat.units.length-1);
+  $('convTo').value = Math.min(d[1], cat.units.length-1);
+  $('convTag').textContent = cat.label;
+  $('convNote').textContent = cat.note || '';
+}
+
+function computeConv(){
+  const cat = UNITS[convCat];
+  const v = parseFloat($('convInput').value);
+  const fu = cat.units[parseInt($('convFrom').value,10)];
+  const tu = cat.units[parseInt($('convTo').value,10)];
+  if(!fu || !tu) return;
+
+  if(!isFinite(v)){
+    $('convResult').innerHTML = '—<small>Enter a number</small>';
+    $('convAll').innerHTML = '';
+    return;
+  }
+
+  const base = toBase(fu, v);
+  const res = fromBase(tu, base);
+  $('convResult').innerHTML = fmtUnit(res) +
+    '<small>' + fmtUnit(v) + ' ' + fu.s + ' = ' + fmtUnit(res) + ' ' + tu.s + '</small>';
+
+  $('convAll').innerHTML = cat.units.map((u,i) => {
+    const q = fromBase(u, base);
+    return '<div class="arow" data-copy="' + fmtUnit(q) + '">' +
+      '<span class="un">' + u.n + '<i>' + u.s + '</i></span>' +
+      '<span class="qty">' + fmtUnit(q) + '</span></div>';
+  }).join('');
+
+  $('convAll').querySelectorAll('.arow').forEach(r => {
+    r.onclick = () => copyText(r.dataset.copy);
+  });
+}
+
+$('convSwap').onclick = () => {
+  const a = $('convFrom').value;
+  $('convFrom').value = $('convTo').value;
+  $('convTo').value = a;
+  computeConv();
+};
+wire(['convInput','convFrom','convTo'], computeConv);
+
+/* ============================================================
+   CALCULATOR
+   Expression is kept as plain text: digits . + - * / %
+   Parsed with a small recursive-descent parser — no eval().
+   Percent follows the usual calculator convention:
+     200 + 10%  -> 220      (10% of the left side)
+     200 × 10%  -> 20       (10% as 0.10)
+     50%        -> 0.5
+   ============================================================ */
+const CALC = { expr:'', done:false, lastExpr:'', value:0, tape:[] };
+const OPS = '+-*/';
+const isOp = c => OPS.includes(c);
+
+function calcTokens(src){
+  const t = [];
+  let i = 0;
+  while(i < src.length){
+    const c = src[i];
+    if(/[0-9.]/.test(c)){
+      let j = i;
+      while(j < src.length && /[0-9.]/.test(src[j])) j++;
+      const n = parseFloat(src.slice(i, j));
+      if(!isFinite(n)) throw new Error('syntax');
+      t.push({t:'n', v:n}); i = j;
+    } else if(isOp(c) || c === '%'){
+      t.push({t:c}); i++;
+    } else throw new Error('syntax');
+  }
+  return t;
+}
+function calcEval(src){
+  const tk = calcTokens(src);
+  let p = 0;
+  const peek = () => tk[p], take = () => tk[p++];
+
+  function factor(){
+    let sign = 1;
+    while(peek() && (peek().t === '-' || peek().t === '+')){
+      if(take().t === '-') sign = -sign;
+    }
+    const n = take();
+    if(!n || n.t !== 'n') throw new Error('syntax');
+    let raw = sign * n.v, pctd = false;
+    if(peek() && peek().t === '%'){ take(); pctd = true; }
+    return {raw, v: pctd ? raw/100 : raw, pctd};
+  }
+  function term(){
+    const first = factor();
+    let v = first.v, count = 1;
+    while(peek() && (peek().t === '*' || peek().t === '/')){
+      const op = take().t;
+      const f = factor(); count++;
+      if(op === '*') v *= f.v;
+      else { if(f.v === 0) throw new Error('div0'); v /= f.v; }
+    }
+    return {v, purePct: count === 1 && first.pctd, raw: first.raw};
+  }
+  function expr(){
+    let left = term().v;
+    while(peek() && (peek().t === '+' || peek().t === '-')){
+      const op = take().t;
+      const r = term();
+      const rv = r.purePct ? left * r.raw/100 : r.v;
+      left = op === '+' ? left + rv : left - rv;
+    }
+    return left;
+  }
+  const out = expr();
+  if(p < tk.length) throw new Error('syntax');
+  return out;
+}
+
+/* strip a dangling operator / dot so the live preview can still evaluate */
+function calcTrimmed(src){
+  let s = src;
+  while(s && (isOp(s.slice(-1)) || s.slice(-1) === '.')) s = s.slice(0,-1);
+  return s;
+}
+const calcHasOp = s => /[+\-*/%]/.test(s.replace(/^-/, ''));
+const tidy = x => Number(x.toPrecision(15));
+
+function fmtCalc(x){
+  if(!isFinite(x)) return '—';
+  x = tidy(x);
+  const a = Math.abs(x);
+  if(a !== 0 && (a >= 1e15 || a < 1e-9)) return x.toExponential(6);
+  return x.toLocaleString('en-IN', {maximumFractionDigits:10});
+}
+function groupNum(run){
+  if(run === '') return '';
+  const neg = run.startsWith('-');
+  const body = neg ? run.slice(1) : run;
+  const [i, d] = body.split('.');
+  const intFmt = i === '' ? '' : Number(i).toLocaleString('en-IN');
+  return (neg ? '-' : '') + intFmt + (d !== undefined ? '.' + d : '');
+}
+function fmtExpr(src){
+  return src
+    .replace(/\d*\.?\d*/g, m => m ? groupNum(m) : '')
+    .replace(/\*/g, ' × ').replace(/\//g, ' ÷ ')
+    .replace(/(\d|%|\.)\-/g, '$1 − ').replace(/(\d|%|\.)\+/g, '$1 + ')
+    .replace(/^-/, '−').replace(/ ([×÷+−]) -/g, ' $1 −');
+}
+function calcWords(x){
+  if(!isFinite(x)) return '';
+  x = tidy(x);
+  const a = Math.abs(x);
+  if(a >= 1e15) return '';
+  const whole = Math.trunc(a);
+  let s = whole === 0 && a > 0 ? 'Zero' : inWordsIndian(whole);
+  const dec = String(x).split('.')[1];
+  if(dec) s += ' point ' + dec.slice(0,6).split('').map(d => d === '0' ? 'Zero' : W_ONES[+d]).join(' ');
+  if(!s || s === 'Zero') return '';
+  if(a >= 1e3){
+    const c = a >= 1e7 ? (a/1e7).toFixed(2) + ' Cr' : a >= 1e5 ? (a/1e5).toFixed(2) + ' L' : (a/1e3).toFixed(2) + ' K';
+    s += '\u00A0· ' + c.replace(' ', '\u00A0');
+  }
+  return (x < 0 ? 'Minus ' : '') + s;
+}
+function currentRun(){
+  const m = CALC.expr.match(/[0-9.]*$/);
+  return m ? m[0] : '';
+}
+
+function calcPress(k){
+  if(navigator.vibrate) try{ navigator.vibrate(5); }catch(e){}
+  let s = CALC.expr;
+
+  if(k === 'C'){ CALC.expr = ''; CALC.done = false; return calcRender(); }
+
+  if(k === 'B'){
+    if(CALC.done){ CALC.done = false; }
+    CALC.expr = s.slice(0,-1);
+    return calcRender();
+  }
+
+  if(/^\d+$/.test(k)){                       // digits, including "00"
+    if(CALC.done){ s = ''; CALC.done = false; }
+    const run = (s.match(/[0-9.]*$/) || [''])[0];
+    if(s.slice(-1) === '%') s += '*';
+    if(run === '0'){ s = s.slice(0,-1); if(k === '00') k = '0'; }
+    if(run === '' && k === '00') k = '0';
+    if(run.replace('.','').length + k.length > 15) return;
+    CALC.expr = s + k;
+    return calcRender();
+  }
+
+  if(k === '.'){
+    if(CALC.done){ s = ''; CALC.done = false; }
+    const run = (s.match(/[0-9.]*$/) || [''])[0];
+    if(run.includes('.')) return;
+    if(s.slice(-1) === '%') s += '*';
+    CALC.expr = s + (run === '' ? '0.' : '.');
+    return calcRender();
+  }
+
+  if(isOp(k)){
+    CALC.done = false;
+    if(s === '' || s === '-'){ CALC.expr = k === '-' ? '-' : '0' + k; return calcRender(); }
+    if(s.slice(-1) === '.') s = s.slice(0,-1);
+    const last = s.slice(-1), prev = s.slice(-2,-1);
+    if(isOp(last)){
+      if(k === '-' && (last === '*' || last === '/')){ CALC.expr = s + '-'; return calcRender(); }
+      s = (last === '-' && (prev === '*' || prev === '/')) ? s.slice(0,-2) : s.slice(0,-1);
+    }
+    CALC.expr = s + k;
+    return calcRender();
+  }
+
+  if(k === '%'){
+    CALC.done = false;
+    if(/\d$/.test(s)){ CALC.expr = s + '%'; calcRender(); }
+    return;
+  }
+
+  if(k === '='){
+    const src = calcTrimmed(s);
+    if(!src) return;
+    if(!calcHasOp(src)){ CALC.expr = src; return calcRender(); }
+    try{
+      const v = calcEval(src);
+      CALC.lastExpr = src;
+      CALC.value = tidy(v);
+      CALC.done = true;
+      const plain = String(CALC.value);
+      CALC.expr = /e/i.test(plain) ? '' : plain;
+      tapeAdd(src, CALC.value);
+      calcRender();
+      glowResult();
+    } catch(e){
+      calcRender(e.message === 'div0' ? "Can't divide by zero" : 'Check the expression');
+    }
+  }
+}
+
+function calcRender(errMsg){
+  const R = $('calcResult'), E = $('calcExpr'), W = $('calcWords');
+  R.classList.remove('err');
+  document.querySelectorAll('#calcKeys .key.op').forEach(b => b.classList.remove('armed'));
+
+  if(errMsg){
+    R.textContent = errMsg; R.classList.add('err');
+    E.textContent = fmtExpr(CALC.expr); W.textContent = '';
+    return;
+  }
+
+  let big, small = '', val = null;
+  if(CALC.done){
+    big = fmtCalc(CALC.value);
+    small = fmtExpr(CALC.lastExpr) + ' =';
+    val = CALC.value;
+  } else {
+    big = CALC.expr === '' ? '0' : fmtExpr(CALC.expr);
+    const src = calcTrimmed(CALC.expr);
+    if(src){
+      try{
+        val = calcEval(src);
+        if(calcHasOp(src)) small = '= ' + fmtCalc(val);
+      }catch(e){ val = null; small = ''; }
+    } else val = 0;
+    const last = CALC.expr.slice(-1);
+    if(isOp(last)){
+      const b = document.querySelector('#calcKeys .key.op[data-k="' + last + '"]');
+      if(b) b.classList.add('armed');
+    }
+  }
+  R.textContent = big;
+  E.textContent = small;
+  W.textContent = val === null ? '' : calcWords(val);
+
+  const len = big.length;
+  const inSheet = !!R.closest('.sheet');
+  const sizes = inSheet ? [38,32,26,21] : [44,37,30,24];
+  R.style.fontSize = (len <= 11 ? sizes[0] : len <= 15 ? sizes[1] : len <= 20 ? sizes[2] : sizes[3]) + 'px';
+
+  CALC.current = val;
+  calcUseRefresh();
+}
+
+/* ---------- tape ---------- */
+function tapeLoad(){
+  try{ const raw = localStorage.getItem('ac-tape'); if(raw) CALC.tape = JSON.parse(raw) || []; }catch(e){}
+}
+function tapeSave(){ try{ localStorage.setItem('ac-tape', JSON.stringify(CALC.tape.slice(0,60))); }catch(e){} }
+function tapeAdd(expr, value){
+  CALC.tape.unshift({e:expr, v:value});
+  CALC.tape = CALC.tape.slice(0,60);
+  tapeSave(); tapeRender();
+}
+function tapeRender(){
+  const L = $('tapeList');
+  $('calcTapeCount').textContent = CALC.tape.length ? CALC.tape.length : '';
+  if(!CALC.tape.length){
+    L.innerHTML = '<div class="tape-empty">Calculations you finish with = are listed here. Tap one to bring its answer back.</div>';
+    return;
+  }
+  L.innerHTML = CALC.tape.map((r,i) =>
+    '<button class="tape-row" data-i="' + i + '"><span class="te">' + fmtExpr(r.e) + ' =</span>' +
+    '<span class="tr">' + fmtCalc(r.v) + '</span></button>').join('');
+  L.querySelectorAll('.tape-row').forEach(b => b.onclick = () => {
+    const r = CALC.tape[+b.dataset.i];
+    CALC.value = r.v; CALC.lastExpr = r.e; CALC.done = true;
+    const plain = String(r.v); CALC.expr = /e/i.test(plain) ? '' : plain;
+    $('calc').classList.remove('tape-open'); tapeBtnLabel();
+    calcRender();
+  });
+}
+function tapeBtnLabel(){
+  const open = $('calc').classList.contains('tape-open');
+  $('calcTapeLbl').textContent = open ? 'Keypad' : 'Tape';
+  $('calcTapeBtn').setAttribute('aria-label', open ? 'Show keypad' : 'Show tape');
+}
+$('calcTapeBtn').onclick = () => { $('calc').classList.toggle('tape-open'); tapeBtnLabel(); };
+$('tapeClear').onclick = () => { CALC.tape = []; tapeSave(); tapeRender(); toast('Tape cleared'); };
+
+/* keys */
+/* ---------- water ripple feedback ---------- */
+function restart(el, cls){
+  el.classList.remove(cls);
+  void el.offsetWidth;                 // reflow so rapid taps replay the animation
+  el.classList.add(cls);
+}
+function spawn(host, cls, x, y, delay){
+  const el = document.createElement('span');
+  el.className = cls;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  if(delay) el.style.animationDelay = delay + 'ms';
+  host.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), {once:true});
+  setTimeout(() => el.remove(), 1600 + (delay || 0));   // safety net
+}
+function glowKey(btn, cx, cy){
+  restart(btn, 'glow');
+  const r = btn.getBoundingClientRect();
+  const x = (cx ?? r.left + r.width/2) - r.left;
+  const y = (cy ?? r.top + r.height/2) - r.top;
+  // keep at most one drop's worth of rings per key during fast tapping
+  btn.querySelectorAll('.drop, .ring').forEach(n => n.remove());
+  spawn(btn, 'drop', x, y);
+  spawn(btn, 'ring', x, y, 0);
+  spawn(btn, 'ring', x, y, 140);
+  spawn(btn, 'ring', x, y, 280);
+}
+function glowResult(){
+  const d = $('calcDisplay'), res = $('calcResult');
+  restart(d, 'flash');
+  restart(res, 'pop');
+  const dr = d.getBoundingClientRect(), rr = res.getBoundingClientRect();
+  const x = rr.right - dr.left - Math.min(60, rr.width/2), y = rr.top - dr.top + rr.height/2;
+  d.querySelectorAll('.ring').forEach(n => n.remove());
+  spawn(d, 'ring', x, y, 0);
+  spawn(d, 'ring', x, y, 180);
+}
+$('calcKeys').addEventListener('pointerdown', e => {
+  const b = e.target.closest('.key');
+  if(b) glowKey(b, e.clientX, e.clientY);
+});
+
+$('calcKeys').addEventListener('click', e => {
+  const b = e.target.closest('.key');
+  if(b) calcPress(b.dataset.k);
+});
+$('calcResult').onclick = () => {
+  if(CALC.current !== null && isFinite(CALC.current)) copyText(String(tidy(CALC.current)));
+};
+
+/* hardware keyboard */
+document.addEventListener('keydown', e => {
+  const sheetOpen = $('calcSheet').classList.contains('show');
+  const onCalc = document.body.dataset.screen === 'calc';
+  if(!sheetOpen && !onCalc) return;
+  if(e.key === 'Escape' && sheetOpen){ closeCalcSheet(); return; }
+  const tag = (e.target.tagName || '').toLowerCase();
+  if(tag === 'input' || tag === 'select' || tag === 'textarea') return;
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  const map = {'Enter':'=','=':'=','Backspace':'B','Delete':'C','Escape':'C','x':'*','X':'*','*':'*','/':'/','+':'+','-':'-','%':'%','.':'.',',':'.'};
+  let k = /^[0-9]$/.test(e.key) ? e.key : map[e.key];
+  if(!k) return;
+  e.preventDefault();
+  calcPress(k);
+  const btn = document.querySelector('#calcKeys .key[data-k="' + (k === '=' ? '=' : k) + '"]');
+  if(btn){ btn.classList.add('hit'); setTimeout(() => btn.classList.remove('hit'), 110); glowKey(btn); }
+});
+
+/* ============================================================
+   CALCULATOR SHEET — reachable from every other screen
+   ============================================================ */
+let lastField = null;
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if(el && el.matches && el.matches('.screen input[type=number]') && !el.closest('#screen-calc')) lastField = el;
+});
+
+function fieldLabel(el){
+  const byFor = el.id && document.querySelector('label[for="' + el.id + '"]');
+  if(byFor) return byFor.textContent.replace(/\s*\(.*?\)\s*/g,'').trim();
+  const cap = el.parentElement && el.parentElement.querySelector('.unit-cap');
+  const fl = el.closest('.field');
+  const lab = fl && fl.querySelector('label');
+  const base = lab ? lab.textContent.replace(/\s*\(.*?\)\s*/g,'').trim() : 'field';
+  return cap ? base + ' (' + cap.textContent.toLowerCase() + ')' : base;
+}
+function usableField(){
+  if(!$('calcSheet').classList.contains('show')) return null;
+  if(!lastField || lastField.offsetParent === null) return null;
+  const scr = lastField.closest('.screen');
+  return scr && scr.classList.contains('active') ? lastField : null;
+}
+function calcUseRefresh(){
+  const f = usableField(), wrap = $('calcUseWrap');
+  const v = CALC.current;
+  if(!f || v === null || !isFinite(v)){ wrap.classList.remove('show'); return; }
+  wrap.classList.add('show');
+  $('calcUse').innerHTML = 'Use <b>' + fmtCalc(Math.round(v*100)/100) + '</b> in ' + fieldLabel(f);
+}
+$('calcUse').onclick = () => {
+  const f = usableField(), v = CALC.current;
+  if(!f || v === null || !isFinite(v)) return;
+  f.value = String(Math.round(v*100)/100);
+  f.dispatchEvent(new Event('input', {bubbles:true}));
+  f.dispatchEvent(new Event('change', {bubbles:true}));
+  const label = fieldLabel(f);
+  closeCalcSheet();
+  toast('Added to ' + label);
+};
+
+function openCalcSheet(){
+  const calc = $('calc');
+  calc.classList.remove('tape-open'); tapeBtnLabel();
+  $('sheetBody').appendChild(calc);
+  // start from the field's value if the calculator is idle
+  if(lastField && usableFieldCandidate() && (CALC.expr === '' || CALC.done)){
+    const v = parseFloat(lastField.value);
+    if(isFinite(v) && v !== 0){ CALC.expr = String(v); CALC.done = false; }
+  }
+  $('calcSheet').classList.add('show');
+  $('calcSheet').setAttribute('aria-hidden','false');
+  $('sheetBackdrop').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  calcRender();
+}
+function usableFieldCandidate(){
+  if(!lastField || lastField.offsetParent === null) return false;
+  const scr = lastField.closest('.screen');
+  return !!(scr && scr.classList.contains('active'));
+}
+function closeCalcSheet(){
+  const sh = $('calcSheet');
+  if(!sh.classList.contains('show')) return;
+  sh.classList.remove('show');
+  sh.setAttribute('aria-hidden','true');
+  $('sheetBackdrop').classList.remove('show');
+  document.body.style.overflow = '';
+  setTimeout(() => {
+    if(!sh.classList.contains('show')){ $('calcHome').appendChild($('calc')); calcRender(); }
+  }, 320);
+}
+$('calcBtn').onclick = openCalcSheet;
+$('sheetClose').onclick = closeCalcSheet;
+$('sheetBackdrop').onclick = closeCalcSheet;
+
+/* swipe the sheet down to dismiss */
+(function(){
+  let y0 = null, dy = 0;
+  const sh = $('calcSheet'), grab = $('sheetGrab');
+  grab.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; dy = 0; sh.style.transition = 'none'; }, {passive:true});
+  grab.addEventListener('touchmove', e => {
+    if(y0 === null) return;
+    dy = Math.max(0, e.touches[0].clientY - y0);
+    sh.style.transform = 'translateY(' + dy + 'px)';
+  }, {passive:true});
+  grab.addEventListener('touchend', () => {
+    sh.style.transition = ''; sh.style.transform = '';
+    if(dy > 90) closeCalcSheet();
+    y0 = null; dy = 0;
+  });
+})();
+
+tapeLoad();
+tapeRender();
+calcRender();
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+computeLoan();
+computeSIP();
+computeLump();
+computeFD();
+computeRD();
+computeValue();
+initConv();
+
+function openFromHash(){
+  const want = (location.hash || '').replace('#','');
+  const btn = document.querySelector('#tabbar button[data-screen="' + want + '"]');
+  if(btn && !btn.classList.contains('active')) btn.click();
+}
+openFromHash();
+window.addEventListener('hashchange', openFromHash);
+
+updateAnswerBar();
+
+/* offline support when served from a real host */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+</script>
+</body>
+</html>
