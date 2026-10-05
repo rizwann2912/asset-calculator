@@ -461,6 +461,8 @@ input:focus, select:focus{outline:2px solid var(--gold); outline-offset:1px;}
   font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;
 }
 .mhead span:not(:first-child){text-align:right;}
+.mrow.c5, .mhead.c5{grid-template-columns:28px 1fr 1fr 1fr 1fr; gap:4px;}
+.mrow .e{text-align:right; font-weight:600;}
 
 /* ============================================================
    UNIT CONVERTER
@@ -2025,9 +2027,10 @@ function renderAmort(){
   const totalPrincipal = lastSchedule.reduce((s,r) => s + r.principal, 0);
 
   if(amortViewSeg.get() === 'month'){
-    out.innerHTML = '<div class="yearblock"><div class="mhead"><span>#</span><span>Interest</span><span>Principal</span><span>Balance</span></div>' +
+    out.innerHTML = '<div class="yearblock"><div class="mhead c5"><span>#</span><span>EMI</span><span>Interest</span><span>Principal</span><span>Balance</span></div>' +
       '<div class="monthlist open">' + lastSchedule.map(r =>
-        '<div class="mrow"><span class="m">' + r.m + '</span>' +
+        '<div class="mrow c5"><span class="m">' + r.m + '</span>' +
+        '<span class="e">' + Math.round(r.emi).toLocaleString('en-IN') + '</span>' +
         '<span class="i">' + Math.round(r.interest).toLocaleString('en-IN') + '</span>' +
         '<span class="p">' + Math.round(r.principal).toLocaleString('en-IN') + '</span>' +
         '<span class="b">' + Math.round(r.closing).toLocaleString('en-IN') + '</span></div>'
@@ -2058,9 +2061,10 @@ function renderAmort(){
         '<div><span>Balance</span><b>' + compact(closing) + '</b></div>' +
       '</div>' +
       '<div class="monthlist" id="ml-' + yr + '">' +
-        '<div class="mhead"><span>#</span><span>Interest</span><span>Principal</span><span>Balance</span></div>' +
+        '<div class="mhead c5"><span>#</span><span>EMI</span><span>Interest</span><span>Principal</span><span>Balance</span></div>' +
         chunk.map(r =>
-          '<div class="mrow"><span class="m">' + r.m + '</span>' +
+          '<div class="mrow c5"><span class="m">' + r.m + '</span>' +
+          '<span class="e">' + Math.round(r.emi).toLocaleString('en-IN') + '</span>' +
           '<span class="i">' + Math.round(r.interest).toLocaleString('en-IN') + '</span>' +
           '<span class="p">' + Math.round(r.principal).toLocaleString('en-IN') + '</span>' +
           '<span class="b">' + Math.round(r.closing).toLocaleString('en-IN') + '</span></div>'
